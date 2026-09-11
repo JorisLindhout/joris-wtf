@@ -1,0 +1,48 @@
+---
+import Field from '../components/Field.svelte';
+import Layout from '../layouts/Layout.astro';
+import { getProjects } from '../lib/content';
+import { sizesFor, srcFor, srcsetFor } from '../lib/images';
+
+const projects = await getProjects();
+---
+
+<Layout>
+	<a class="skip-link" href="#projects">Skip to project list</a>
+	<h1 class="page-title">joris.wtf</h1>
+
+	<main>
+		<nav id="projects" aria-label="Projects">
+			<ul class="project-list">
+				{
+					projects.map((project) => (
+						<li>
+							<a
+								href={project.url}
+								target={project.openInNewTab ? '_blank' : undefined}
+								rel={project.openInNewTab ? 'noopener noreferrer' : undefined}
+							>
+								<img
+									src={srcFor(project)}
+									srcset={srcsetFor(project)}
+									sizes={sizesFor(220)}
+									width="640"
+									height="480"
+									alt={project.thumbnailAlt}
+									loading="lazy"
+									decoding="async"
+								/>
+								<span class="title">{project.title}</span>
+								{project.description ? <span class="desc">{project.description}</span> : null}
+							</a>
+						</li>
+					))
+				}
+			</ul>
+		</nav>
+
+		<div class="field-host">
+			<Field client:load projects={projects} />
+		</div>
+	</main>
+</Layout>

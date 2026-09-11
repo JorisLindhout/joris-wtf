@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://joris.wtf/sitemap-index.xml

@@ -1,0 +1,25 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Not found — joris.wtf" description="This path is not a project.">
+	<main>
+		<h1>Not found</h1>
+		<p><a href="/">Back to the field</a></p>
+	</main>
+</Layout>
+
+<style>
+	main {
+		min-height: 100dvh;
+		display: grid;
+		place-content: center;
+		gap: 0.75rem;
+		text-align: center;
+		padding: 2rem;
+	}
+
+	a {
+		color: inherit;
+	}
+</style>
