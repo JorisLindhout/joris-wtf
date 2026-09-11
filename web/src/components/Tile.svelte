@@ -46,57 +46,59 @@
 		draggable="false"
 	/>
 	<a class="meta" href={project.url} {target} rel={rel} tabindex={tabIndex} draggable="false">
-		<span class="title">{project.title}</span>
-		{#if project.description}
-			<span class="desc">{project.description}</span>
-		{/if}
+		<span class="copy">
+			<span class="title">{project.title}</span>
+			{#if project.description}
+				<span class="desc">{project.description}</span>
+			{/if}
+		</span>
 	</a>
 </article>
 
 <style>
 	.tile {
 		position: relative;
-		display: flex;
-		flex-direction: column;
 		background: var(--tile-wash);
 		border: 1px solid var(--line);
 		overflow: hidden;
 		user-select: none;
 	}
 
-	.tile:focus-within {
-		outline: 2px solid var(--focus);
-		outline-offset: -2px;
-	}
-
 	img {
 		display: block;
 		width: 100%;
-		flex: 1 1 auto;
-		height: 0;
+		height: 100%;
 		object-fit: cover;
 		opacity: 0.78;
 		pointer-events: none;
 	}
 
 	.meta {
-		flex: 0 0 var(--title-block, 44px);
+		position: absolute;
+		inset: 0;
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
-		gap: 0;
-		padding: 0 var(--space-sm);
-		min-height: var(--title-block, 44px);
-		background: var(--tile);
+		justify-content: flex-end;
 		color: var(--fg);
 		text-decoration: none;
 		cursor: pointer;
 	}
 
-	.meta::after {
-		content: '';
-		position: absolute;
-		inset: 0;
+	.meta:focus,
+	.meta:focus-visible {
+		outline: none;
+	}
+
+	.copy {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0;
+		padding: 0 var(--space-sm);
+		flex: 0 0 auto;
+		min-height: var(--title-block, 44px);
+		background: var(--tile);
+		overflow: hidden;
 	}
 
 	.title {
@@ -118,6 +120,7 @@
 	}
 
 	.tile:hover .desc,
+	.tile:focus-within .desc,
 	.meta:focus-visible .desc {
 		display: block;
 	}

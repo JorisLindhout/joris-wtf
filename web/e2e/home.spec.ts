@@ -190,7 +190,52 @@ test.describe('homepage', () => {
 		await expect(skip).toBeFocused();
 		await page.keyboard.press('Enter');
 		await expect(page).toHaveURL(/#field/);
-		await expect(field).toBeFocused();
+		const focusedTile = page.locator('.field .tile:has(a:focus)');
+		await expect(focusedTile).toBeVisible();
+		const box = await focusedTile.boundingBox();
+		expect(box).toBeTruthy();
+		const viewport = page.viewportSize()!;
+		expect(box!.x + box!.width / 2).toBeGreaterThan(0);
+		expect(box!.x + box!.width / 2).toBeLessThan(viewport.width);
+		expect(box!.y + box!.height / 2).toBeGreaterThan(0);
+		expect(box!.y + box!.height / 2).toBeLessThan(viewport.height);
+	});
+
+	test('tabs through visible project tiles', async ({ page }) => {
+		await page.goto('/');
+		await page.locator('.field .tile').first().waitFor();
+		await page.keyboard.press('Tab');
+		await expect(page.locator('.skip-link')).toBeFocused();
+
+		const cells: string[] = [];
+		for (let i = 0; i < 24; i += 1) {
+			await page.keyboard.press('Tab');
+			const info = await page.evaluate(() => {
+				const el = document.activeElement;
+				if (!(el instanceof HTMLElement)) return { inField: false as const };
+				const tile = el.closest('.field .tile');
+				if (!tile) return { inField: false as const };
+				const r = tile.getBoundingClientRect();
+				return {
+					inField: true as const,
+					cell: tile.getAttribute('data-cell') ?? '',
+					cx: r.x + r.width / 2,
+					cy: r.y + r.height / 2,
+					vw: window.innerWidth,
+					vh: window.innerHeight,
+				};
+			});
+			if (!info.inField) {
+				expect(cells.length).toBeGreaterThan(1);
+				break;
+			}
+			cells.push(info.cell);
+			expect(info.cx).toBeGreaterThanOrEqual(0);
+			expect(info.cx).toBeLessThanOrEqual(info.vw);
+			expect(info.cy).toBeGreaterThanOrEqual(0);
+			expect(info.cy).toBeLessThanOrEqual(info.vh);
+		}
+		expect(new Set(cells).size).toBeGreaterThan(1);
 	});
 
 	test('shows tile descriptions without hover on touch', async ({ page }, testInfo) => {

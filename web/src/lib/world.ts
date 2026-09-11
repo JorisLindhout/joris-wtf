@@ -131,6 +131,27 @@ export function projectIndexForCell(
 	return cellSeed(x, y) % count;
 }
 
+/** True when the whole tile is on-screen, so it is a sensible Tab stop. */
+export function cellFullyInViewport(
+	x: number,
+	y: number,
+	camX: number,
+	camY: number,
+	viewportW: number,
+	viewportH: number,
+	layout: Layout,
+	slop = 2,
+): boolean {
+	const left = x * layout.cellW - camX;
+	const top = y * layout.cellH - camY;
+	return (
+		left >= -slop &&
+		top >= -slop &&
+		left + layout.tileW <= viewportW + slop &&
+		top + layout.tileH <= viewportH + slop
+	);
+}
+
 export function visibleCells(
 	camX: number,
 	camY: number,

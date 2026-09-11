@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { sortableTitle, sortProjects } from './sort';
 import type { Project } from './types';
 import {
+	cellFullyInViewport,
 	cellSeed,
 	computeLayout,
 	initialCamera,
@@ -119,5 +120,14 @@ describe('world', () => {
 		const cells = visibleCells(0, 0, 400, 400, layout, 1);
 		expect(cells.length).toBeGreaterThan(0);
 		expect(cells.length).toBeLessThan(80);
+	});
+
+	it('treats only fully on-screen tiles as keyboard tab stops', () => {
+		const layout = computeLayout(800, 8);
+		const cam = initialCamera(layout, 800, 600);
+		expect(cellFullyInViewport(0, 0, cam.x, cam.y, 800, 600, layout)).toBe(true);
+		expect(cellFullyInViewport(-1, 0, cam.x, cam.y, 800, 600, layout)).toBe(false);
+		expect(cellFullyInViewport(0, -1, cam.x, cam.y, 800, 600, layout)).toBe(false);
+		expect(cellFullyInViewport(10, 10, cam.x, cam.y, 800, 600, layout)).toBe(false);
 	});
 });

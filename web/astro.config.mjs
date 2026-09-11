@@ -13,6 +13,7 @@ const { PUBLIC_SANITY_PROJECT_ID, PUBLIC_SANITY_DATASET } = loadEnv(
 
 export default defineConfig({
 	site: 'https://joris.wtf',
+	devToolbar: { enabled: false },
 	integrations: [
 		svelte(),
 		sitemap(),

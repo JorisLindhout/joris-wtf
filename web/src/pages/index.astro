@@ -46,7 +46,7 @@ const lcp = content.ok ? content.projects[0] : undefined;
 				class="skip-link"
 				href="#projects"
 				data-field-href="#field"
-				data-field-label="Skip to project field"
+				data-field-label="Skip to projects"
 			>
 				Skip to project list
 			</a>
@@ -82,6 +82,14 @@ const lcp = content.ok ? content.projects[0] : undefined;
 						}
 					</ul>
 				</nav>
+				<script is:inline>
+					(() => {
+						const nav = document.getElementById('projects');
+						if (!nav || document.documentElement.dataset.enhanced == null) return;
+						nav.setAttribute('aria-hidden', 'true');
+						nav.inert = true;
+					})();
+				</script>
 
 				<div class="field-host">
 					<Field client:load projects={content.projects} />

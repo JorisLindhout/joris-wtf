@@ -52,7 +52,7 @@ html[data-field='ready'] body {
 }
 
 .skip-link {
-	position: absolute;
+	position: fixed;
 	left: var(--space-md);
 	top: var(--space-md);
 	z-index: 20;
@@ -61,10 +61,11 @@ html[data-field='ready'] body {
 	color: var(--fg);
 	border: 1px solid var(--focus);
 	text-decoration: none;
-	transform: translateY(-200%);
+	transform: translateY(calc(-100% - var(--space-md) * 2));
 }
 
-.skip-link:focus {
+.skip-link:focus,
+.skip-link:focus-visible {
 	transform: none;
 }
 
@@ -125,13 +126,14 @@ html[data-enhanced] .project-list,
 html[data-field='ready'] .project-list {
 	position: absolute;
 	left: 0;
-	top: 200vh;
+	top: 0;
 	width: 1px;
 	height: 1px;
 	padding: 0;
-	margin: 0;
+	margin: -1px;
 	overflow: hidden;
 	clip: rect(0, 0, 0, 0);
+	clip-path: inset(50%);
 	white-space: nowrap;
 	border: 0;
 }
@@ -142,6 +144,10 @@ html[data-field='ready'] .project-list {
 
 html[data-field='ready'] .field-root {
 	display: block;
+}
+
+astro-dev-toolbar {
+	display: none !important;
 }
 
 .field-host,

@@ -5,6 +5,7 @@
 	import Tile from './Tile.svelte';
 	import type { Project } from '../lib/types';
 	import {
+		cellFullyInViewport,
 		computeLayout,
 		initialCamera,
 		projectIndexForCell,
@@ -53,6 +54,10 @@
 	const camX = $derived(origin.x + panX);
 	const camY = $derived(origin.y + panY);
 	const cells = $derived(layout ? visibleCells(camX, camY, width, height, layout, 1) : []);
+
+	function isTabStop(x: number, y: number, current: Layout) {
+		return cellFullyInViewport(x, y, camX, camY, width, height, current);
+	}
 
 	onMount(() => {
 		const apply = () => {
@@ -200,13 +205,24 @@
 	}
 
 	function onFocusIn(event: FocusEvent) {
+		const node = event.currentTarget;
+		if (node instanceof HTMLElement) {
+			node.scrollTop = 0;
+			node.scrollLeft = 0;
+		}
 		const target = event.target;
 		if (!(target instanceof Element)) return;
 		const cell = target.closest('[data-cell]');
-		if (!cell) return;
+		if (!cell) {
+			if (node instanceof HTMLElement) {
+				node.querySelector<HTMLElement>('a[tabindex="0"]')?.focus({ preventScroll: true });
+			}
+			return;
+		}
 		const [x, y] = (cell.getAttribute('data-cell') ?? '0,0').split(',').map(Number);
 		focusX = x;
 		focusY = y;
+		if (layout) ensureVisible(x, y, layout);
 	}
 
 	function fieldSurface(node: HTMLElement) {
@@ -223,6 +239,15 @@
 			if (skip.dataset.fieldHref) skip.href = skip.dataset.fieldHref;
 			if (skip.dataset.fieldLabel) skip.textContent = skip.dataset.fieldLabel;
 		}
+
+		const focusFirstTile = () => {
+			node.querySelector<HTMLElement>('a[tabindex="0"]')?.focus({ preventScroll: true });
+		};
+
+		const onSkipClick = () => {
+			requestAnimationFrame(focusFirstTile);
+		};
+		if (skip instanceof HTMLAnchorElement) skip.addEventListener('click', onSkipClick);
 
 		let pointerId: number | null = null;
 		let lastX = 0;
@@ -365,6 +390,16 @@
 			onKeydown(event);
 		};
 
+		const onNodeFocus = (event: FocusEvent) => {
+			if (event.target !== node) return;
+			focusFirstTile();
+		};
+
+		const onScroll = () => {
+			node.scrollTop = 0;
+			node.scrollLeft = 0;
+		};
+
 		node.addEventListener('pointerdown', onPointerDown);
 		node.addEventListener('pointermove', onPointerMove);
 		node.addEventListener('pointerup', onPointerUp);
@@ -373,6 +408,8 @@
 		node.addEventListener('click', onClick, true);
 		node.addEventListener('keydown', onNodeKeydown);
 		node.addEventListener('focusin', onFocusIn);
+		node.addEventListener('focus', onNodeFocus);
+		node.addEventListener('scroll', onScroll);
 
 		return () => {
 			stopInertia();
@@ -384,6 +421,7 @@
 			if (skip instanceof HTMLAnchorElement) {
 				if (skipHref !== null) skip.href = skipHref;
 				if (skipLabel !== null) skip.textContent = skipLabel;
+				skip.removeEventListener('click', onSkipClick);
 			}
 			node.removeEventListener('pointerdown', onPointerDown);
 			node.removeEventListener('pointermove', onPointerMove);
@@ -393,6 +431,8 @@
 			node.removeEventListener('click', onClick, true);
 			node.removeEventListener('keydown', onNodeKeydown);
 			node.removeEventListener('focusin', onFocusIn);
+			node.removeEventListener('focus', onNodeFocus);
+			node.removeEventListener('scroll', onScroll);
 		};
 	}
 </script>
@@ -403,7 +443,7 @@
 	tabindex="-1"
 	class:dragging
 	role="region"
-	aria-label="Pannable project field"
+	aria-label="Project field. Tab through visible projects, arrow keys move to adjacent tiles."
 	bind:clientWidth={width}
 	bind:clientHeight={height}
 	style:--title-block="{TITLE_BLOCK}px"
@@ -433,7 +473,7 @@
 						cellY={cell.y}
 						width={layout.tileW}
 						height={layout.tileH}
-						tabIndex={cell.x === focusX && cell.y === focusY ? 0 : -1}
+						tabIndex={layout && (isTabStop(cell.x, cell.y, layout) || (cell.x === focusX && cell.y === focusY)) ? 0 : -1}
 						loading="eager"
 						fetchpriority={cell.x === 0 && cell.y === 0 ? 'high' : 'auto'}
 					/>
@@ -449,6 +489,7 @@
 		inset: 0;
 		z-index: 1;
 		overflow: hidden;
+		overflow-anchor: none;
 		touch-action: none;
 		cursor: grab;
 		background: var(--bg);
@@ -456,11 +497,6 @@
 
 	.field:focus {
 		outline: none;
-	}
-
-	.field:focus-visible {
-		outline: 2px solid var(--focus);
-		outline-offset: -2px;
 	}
 
 	.field.dragging {
@@ -535,5 +571,11 @@
 		left: 0;
 		top: 0;
 		will-change: transform;
+	}
+
+	.cell:focus-within {
+		z-index: 2;
+		outline: 3px solid var(--focus);
+		outline-offset: 4px;
 	}
 </style>
