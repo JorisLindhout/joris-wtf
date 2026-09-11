@@ -1,0 +1,128 @@
+---
+import Field from '../components/Field.svelte';
+import Layout from '../layouts/Layout.astro';
+import { getProjects, getSiteSeo } from '../lib/content';
+import { sizesFor, srcFor, srcsetFor } from '../lib/images';
+import { SITE_THEME_COLOR } from '../lib/seo';
+import '../styles/global.css';
+import type { Project, SiteSeo } from '../lib/types';
+
+type HomeContent =
+	| { ok: true; projects: Project[]; seo: SiteSeo }
+	| { ok: false; error: string };
+
+let content: HomeContent;
+try {
+	content = { ok: true, projects: await getProjects(), seo: await getSiteSeo() };
+} catch (error) {
+	const message =
+		error instanceof Error ? error.message : 'Failed to load content from Sanity.';
+	if (import.meta.env.PROD) throw error;
+	content = { ok: false, error: message };
+}
+
+const lcp = content.ok ? content.projects[0] : undefined;
+---
+
+{
+	content.ok ? (
+		<Layout seo={content.seo} projects={content.projects}>
+			<Fragment slot="head">
+				{
+					lcp ? (
+						<link
+							rel="preload"
+							as="image"
+							type="image/webp"
+							href={srcFor(lcp)}
+							imagesrcset={srcsetFor(lcp)}
+							imagesizes="280px"
+							fetchpriority="high"
+						/>
+					) : null
+				}
+			</Fragment>
+			<a
+				class="skip-link"
+				href="#projects"
+				data-field-href="#field"
+				data-field-label="Skip to project field"
+			>
+				Skip to project list
+			</a>
+
+			<main>
+				<h1 class="page-title">{content.seo.title}</h1>
+				<nav id="projects" aria-label="Projects">
+					<ul class="project-list">
+						{
+							content.projects.map((project) => (
+								<li>
+									<a
+										href={project.url}
+										target={project.openInNewTab ? '_blank' : undefined}
+										rel={project.openInNewTab ? 'noopener noreferrer' : undefined}
+									>
+										<img
+											src={srcFor(project)}
+											srcset={srcsetFor(project)}
+											sizes={sizesFor(220)}
+											width="640"
+											height="480"
+											alt={project.thumbnailAlt}
+											loading="lazy"
+											decoding="async"
+											fetchpriority="low"
+										/>
+										<span class="title">{project.title}</span>
+										{project.description ? <span class="desc">{project.description}</span> : null}
+									</a>
+								</li>
+							))
+						}
+					</ul>
+				</nav>
+
+				<div class="field-host">
+					<Field client:load projects={content.projects} />
+				</div>
+			</main>
+		</Layout>
+	) : (
+		<html lang="en">
+			<head>
+				<meta charset="utf-8" />
+				<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+				<meta name="color-scheme" content="dark" />
+				<meta name="theme-color" content={SITE_THEME_COLOR} />
+				<meta name="robots" content="noindex" />
+				<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+				<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+				<link rel="shortcut icon" href="/favicon.ico" />
+				<title>Content unavailable</title>
+			</head>
+			<body>
+				<main class="content-error">
+					<h1>Content unavailable</h1>
+					<p>{content.error}</p>
+				</main>
+			</body>
+		</html>
+	)
+}
+
+<style>
+	.content-error {
+		min-height: 100dvh;
+		display: grid;
+		place-content: center;
+		gap: var(--space-md);
+		text-align: center;
+		padding: var(--space-2xl);
+	}
+
+	.content-error p {
+		max-width: 36rem;
+		color: var(--fg-muted);
+	}
+</style>

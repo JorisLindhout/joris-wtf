@@ -1,0 +1,159 @@
+:root {
+	color-scheme: dark;
+	--bg: #070708;
+	--fg: #c8c6c2;
+	--fg-muted: #a3a19c;
+	--tile: #101012;
+	--tile-wash: rgba(12, 12, 14, 0.42);
+	--line: rgba(42, 42, 46, 0.5);
+	--focus: #eceae4;
+	--font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--space-2xs: 0.4rem;
+	--space-xs: 0.5rem;
+	--space-sm: 0.6rem;
+	--space-md: 0.75rem;
+	--space-lg: 1rem;
+	--space-xl: 1.25rem;
+	--space-2xl: 2rem;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+	background: var(--bg);
+	color: var(--fg);
+	font-family: var(--font);
+	font-size: 15px;
+	line-height: 1.4;
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	overscroll-behavior: none;
+}
+
+html[data-enhanced],
+html[data-field='ready'] {
+	height: 100%;
+	overflow: hidden;
+}
+
+html[data-enhanced] body,
+html[data-field='ready'] body {
+	height: 100%;
+	overflow: hidden;
+}
+
+.skip-link {
+	position: absolute;
+	left: var(--space-md);
+	top: var(--space-md);
+	z-index: 20;
+	padding: var(--space-xs) var(--space-md);
+	background: var(--bg);
+	color: var(--fg);
+	border: 1px solid var(--focus);
+	text-decoration: none;
+	transform: translateY(-200%);
+}
+
+.skip-link:focus {
+	transform: none;
+}
+
+.page-title {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.project-list {
+	list-style: none;
+	margin: 0;
+	padding: var(--space-xl);
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+	gap: var(--space-lg);
+}
+
+.project-list a {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	color: inherit;
+	text-decoration: none;
+}
+
+.project-list a:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 4px;
+}
+
+.project-list img {
+	display: block;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 4 / 3;
+	object-fit: cover;
+	background: var(--tile);
+	border: 1px solid var(--line);
+}
+
+.project-list .title {
+	font-size: 0.95rem;
+}
+
+.project-list .desc {
+	color: var(--fg-muted);
+	font-size: 0.85rem;
+}
+
+html[data-enhanced] .project-list,
+html[data-field='ready'] .project-list {
+	position: absolute;
+	left: 0;
+	top: 200vh;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.field-root {
+	display: none;
+}
+
+html[data-field='ready'] .field-root {
+	display: block;
+}
+
+.field-host,
+.field-host astro-island {
+	position: fixed;
+	inset: 0;
+	z-index: 1;
+	display: block;
+	background-color: var(--bg);
+	background-image: radial-gradient(
+		ellipse 90% 80% at 50% 42%,
+		transparent 52%,
+		rgba(7, 7, 8, 0.42) 100%
+	);
+}

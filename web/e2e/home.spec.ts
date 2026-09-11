@@ -1,0 +1,209 @@
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
+
+test.describe('homepage', () => {
+	test('exposes SEO metadata and a full HTML project list', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.locator('h1.content-error, .content-error')).toHaveCount(0);
+		await expect(page).toHaveTitle(/.+/);
+		await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /.+/);
+		await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+			'href',
+			'https://joris.wtf/',
+		);
+		await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+			'content',
+			/cdn\.sanity\.io/,
+		);
+		await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute(
+			'content',
+			/cdn\.sanity\.io/,
+		);
+		await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+			'content',
+			'summary_large_image',
+		);
+
+		const siteName = await page.locator('meta[property="og:site_name"]').getAttribute('content');
+		expect(siteName).toBeTruthy();
+		await expect(page.locator('link[rel="icon"][sizes="96x96"]')).toHaveAttribute(
+			'href',
+			'/favicon-96x96.png',
+		);
+		await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute(
+			'href',
+			'/favicon.svg',
+		);
+		await expect(page.locator('link[rel="shortcut icon"]')).toHaveAttribute('href', '/favicon.ico');
+		await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
+			'href',
+			'/apple-touch-icon.png',
+		);
+		await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute(
+			'content',
+			siteName!,
+		);
+		await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/site.webmanifest');
+
+		const description = await page.locator('meta[name="description"]').getAttribute('content');
+		const manifestResponse = await page.request.get('/site.webmanifest');
+		expect(manifestResponse.ok()).toBe(true);
+		expect(manifestResponse.headers()['content-type']).toMatch(/manifest\+json/);
+		const manifest = (await manifestResponse.json()) as {
+			name: string;
+			short_name: string;
+			description: string;
+			icons: unknown[];
+		};
+		expect(manifest.name).toBe(siteName);
+		expect(manifest.short_name).toBe(siteName);
+		expect(manifest.description).toBe(description);
+		expect(manifest.icons.length).toBeGreaterThan(0);
+
+		const jsonLd = page.locator('script[type="application/ld+json"]');
+		await expect(jsonLd).toHaveCount(1);
+		const graph = JSON.parse((await jsonLd.textContent()) ?? '{}') as {
+			'@graph': Array<Record<string, unknown>>;
+		};
+		expect(graph['@graph'][0]).toMatchObject({
+			'@type': 'WebSite',
+			url: 'https://joris.wtf/',
+		});
+		expect(graph['@graph'][1]).toMatchObject({
+			'@type': 'ItemList',
+		});
+
+		await expect(page.locator('link[rel="preload"][as="image"]')).toHaveCount(1);
+
+		const list = page.locator('#projects a');
+		const count = await list.count();
+		expect(count).toBeGreaterThan(0);
+		expect(graph['@graph'][1]).toMatchObject({
+			numberOfItems: count,
+		});
+
+		const blankLinks = page.locator('#projects a[target="_blank"]');
+		const blankCount = await blankLinks.count();
+		expect(blankCount).toBeGreaterThan(0);
+		for (let i = 0; i < blankCount; i += 1) {
+			await expect(blankLinks.nth(i)).toHaveAttribute('rel', /noopener/);
+		}
+
+		const images = page.locator('#projects img');
+		const imageCount = await images.count();
+		expect(imageCount).toBe(count);
+		for (let i = 0; i < imageCount; i += 1) {
+			await expect(images.nth(i)).toHaveAttribute('src', /cdn\.sanity\.io/);
+			await expect(images.nth(i)).toHaveAttribute('alt', /.+/);
+			await expect(images.nth(i)).toHaveAttribute('loading', 'lazy');
+		}
+
+		await page.locator('.field .tile img').first().waitFor();
+		await expect(page.locator('.field .tile img').first()).toHaveAttribute('loading', 'eager');
+		await expect(page.locator('.field .tile[data-cell="0,0"] img')).toHaveAttribute(
+			'fetchpriority',
+			'high',
+		);
+	});
+
+	test('has no serious axe violations on first paint', async ({ page }) => {
+		await page.goto('/');
+		await page.locator('.field').waitFor();
+		const results = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag22aa', 'best-practice'])
+			.analyze();
+		expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+		const blocking = results.incomplete.filter((v) =>
+			['aria-hidden-focus', 'skip-link', 'region'].includes(v.id),
+		);
+		expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+	});
+
+	test('hydrates a pannable field with overscan tiles', async ({ page }) => {
+		await page.goto('/');
+		const field = page.locator('.field');
+		await expect(field).toBeVisible();
+		await expect(page.locator('.field .tile').first()).toBeVisible();
+		const listCount = await page.locator('#projects a').count();
+		const tileCount = await page.locator('.field .tile').count();
+		expect(tileCount).toBeGreaterThan(listCount / 2);
+
+		await expect(page.locator('.field .tile').first()).toHaveRole('article');
+		await expect(page.locator('.field .tile a').first()).toBeVisible();
+
+		const overscan = await page.evaluate(() => {
+			const vw = window.innerWidth;
+			const vh = window.innerHeight;
+			const tiles = [...document.querySelectorAll('.field .tile')];
+			const crosses = (edge: 'top' | 'right' | 'bottom' | 'left') =>
+				tiles.some((tile) => {
+					const r = tile.getBoundingClientRect();
+					if (edge === 'top') return r.top < 0 && r.bottom > 16;
+					if (edge === 'bottom') return r.top < vh - 16 && r.bottom > vh;
+					if (edge === 'left') return r.left < 0 && r.right > 16;
+					return r.left < vw - 16 && r.right > vw;
+				});
+			return {
+				top: crosses('top'),
+				right: crosses('right'),
+				bottom: crosses('bottom'),
+				left: crosses('left'),
+			};
+		});
+		expect(overscan).toEqual({ top: true, right: true, bottom: true, left: true });
+
+		const voidLayer = page.locator('.field .void');
+		await expect(voidLayer).toBeAttached();
+		await expect(page.locator('.field .wash')).toHaveCount(4);
+		const far = page.locator('.field .wash.far');
+		const near = page.locator('.field .wash.near');
+		const farBefore = await far.evaluate((el) => el.style.backgroundPosition);
+		const nearBefore = await near.evaluate((el) => el.style.backgroundPosition);
+
+		const before = await page.locator('.world').evaluate((el) => el.style.transform);
+		await field.hover();
+		await page.mouse.down();
+		await page.mouse.move(180, 160);
+		const stretches = await page.locator('.cell').evaluateAll((els) =>
+			els.map((el) => el.getAttribute('data-stretch')),
+		);
+		expect(new Set(stretches).size).toBeGreaterThan(1);
+		await page.mouse.up();
+		const after = await page.locator('.world').evaluate((el) => el.style.transform);
+		expect(after).not.toBe(before);
+		const farAfter = await far.evaluate((el) => el.style.backgroundPosition);
+		const nearAfter = await near.evaluate((el) => el.style.backgroundPosition);
+		expect(farAfter).not.toBe(farBefore);
+		expect(nearAfter).not.toBe(nearBefore);
+		expect(nearAfter).not.toBe(farAfter);
+	});
+
+	test('keeps the skip link and keyboard path to the field', async ({ page }) => {
+		await page.goto('/');
+		const field = page.locator('#field');
+		await field.waitFor();
+		const skip = page.locator('.skip-link');
+		await expect(skip).toHaveAttribute('href', /#field$/);
+		await expect(page.locator('#projects')).toHaveJSProperty('inert', true);
+
+		await page.keyboard.press('Tab');
+		await expect(skip).toBeFocused();
+		await page.keyboard.press('Enter');
+		await expect(page).toHaveURL(/#field/);
+		await expect(field).toBeFocused();
+	});
+
+	test('shows tile descriptions without hover on touch', async ({ page }, testInfo) => {
+		await page.goto('/');
+		await page.locator('.field .tile').first().waitFor();
+		const desc = page.locator('.field .tile .desc').first();
+		await expect(desc).toBeAttached();
+		if (testInfo.project.name === 'mobile') {
+			await expect(desc).toBeVisible();
+		} else {
+			await expect(desc).toBeHidden();
+			await page.locator('.field .tile').filter({ has: desc }).first().hover();
+			await expect(desc).toBeVisible();
+		}
+	});
+});

@@ -1,0 +1,28 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getSiteSeo } from '../lib/content';
+
+const seo = await getSiteSeo();
+---
+
+<Layout seo={seo} title={`Not found — ${seo.siteName}`} description="This path is not a project.">
+	<main>
+		<h1>Not found</h1>
+		<p><a href="/">Back to the field</a></p>
+	</main>
+</Layout>
+
+<style>
+	main {
+		min-height: 100dvh;
+		display: grid;
+		place-content: center;
+		gap: var(--space-md);
+		text-align: center;
+		padding: var(--space-2xl);
+	}
+
+	a {
+		color: inherit;
+	}
+</style>

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1000" height="1000"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><style>
+    #light-icon {
+      display: inline;
+    }
+    #dark-icon {
+      display: none;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      #light-icon {
+        display: none;
+      }
+      #dark-icon {
+        display: inline;
+      }
+    }
+  </style><g id="light-icon"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1000" height="1000"><g><g transform="matrix(1.5873015873015872,0,0,1.5873015873015872,0,0)"><svg xmlns="http://www.w3.org/2000/svg" width="630" height="630" viewBox="0 0 630 630" fill="none"><g clip-path="url(#clip0_5092_108)">
+<rect width="630" height="630" fill="#070708"></rect>
+<rect x="14" y="15" width="600" height="600" fill="url(#paint0_radial_5092_108)"></rect>
+<rect x="-49" y="-62" width="160" height="160" fill="#101012"></rect>
+<rect x="343" y="-62" width="160" height="160" fill="#101012"></rect>
+<rect x="147" y="-62" width="160" height="160" fill="#101012"></rect>
+<rect x="539" y="-62" width="160" height="160" fill="#101012"></rect>
+<rect x="-49" y="134" width="160" height="160" fill="#101012"></rect>
+<rect x="343" y="134" width="160" height="160" fill="#101012"></rect>
+<rect x="147" y="134" width="160" height="160" fill="#101012"></rect>
+<rect x="539" y="134" width="160" height="160" fill="#101012"></rect>
+<rect x="-49" y="330" width="160" height="160" fill="#101012"></rect>
+<rect x="-49" y="526" width="160" height="160" fill="#101012"></rect>
+<rect x="343" y="330" width="160" height="160" fill="#101012"></rect>
+<rect x="343" y="526" width="160" height="160" fill="#101012"></rect>
+<rect x="147" y="330" width="160" height="160" fill="#101012"></rect>
+<rect x="147" y="526" width="160" height="160" fill="#101012"></rect>
+<rect x="539" y="330" width="160" height="160" fill="#101012"></rect>
+<rect x="539" y="526" width="160" height="160" fill="#101012"></rect>
+</g><defs>
+<radialGradient id="paint0_radial_5092_108" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(314 315) rotate(90) scale(300)">
+<stop stop-color="#1F252F"></stop>
+<stop offset="1" stop-color="#070708"></stop>
+</radialGradient>
+<clipPath id="clip0_5092_108">
+<rect width="630" height="630" fill="white"></rect>
+</clipPath>
+</defs></svg></g></g></svg></g><g id="dark-icon"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1000" height="1000"><g clip-path="url(#SvgjsClipPath1033)"><rect width="1000" height="1000" fill="#000000"></rect><g transform="matrix(1.1111111111111112,0,0,1.1111111111111112,150,150)"><svg xmlns="http://www.w3.org/2000/svg" width="630" height="630" viewBox="0 0 630 630" fill="none"><g clip-path="url(#clip0_5092_108)">
+<rect width="630" height="630" fill="#070708"></rect>
+<rect x="14" y="15" width="600" height="600" fill="url(#paint0_radial_5092_108)"></rect>
+<rect x="-49" y="-62" width="160" height="160" fill="#101012"></rect>
+<rect x="343" y="-62" width="160" height="160" fill="#101012"></rect>
+<rect x="147" y="-62" width="160" height="160" fill="#101012"></rect>
+<rect x="539" y="-62" width="160" height="160" fill="#101012"></rect>
+<rect x="-49" y="134" width="160" height="160" fill="#101012"></rect>
+<rect x="343" y="134" width="160" height="160" fill="#101012"></rect>
+<rect x="147" y="134" width="160" height="160" fill="#101012"></rect>
+<rect x="539" y="134" width="160" height="160" fill="#101012"></rect>
+<rect x="-49" y="330" width="160" height="160" fill="#101012"></rect>
+<rect x="-49" y="526" width="160" height="160" fill="#101012"></rect>
+<rect x="343" y="330" width="160" height="160" fill="#101012"></rect>
+<rect x="343" y="526" width="160" height="160" fill="#101012"></rect>
+<rect x="147" y="330" width="160" height="160" fill="#101012"></rect>
+<rect x="147" y="526" width="160" height="160" fill="#101012"></rect>
+<rect x="539" y="330" width="160" height="160" fill="#101012"></rect>
+<rect x="539" y="526" width="160" height="160" fill="#101012"></rect>
+</g><defs>
+<radialGradient id="paint0_radial_5092_108" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(314 315) rotate(90) scale(300)">
+<stop stop-color="#1F252F"></stop>
+<stop offset="1" stop-color="#070708"></stop>
+</radialGradient>
+<clipPath id="clip0_5092_108">
+<rect width="630" height="630" fill="white"></rect>
+</clipPath>
+<clipPath id="SvgjsClipPath1033"><rect width="1000" height="1000" x="0" y="0" rx="350" ry="350"></rect></clipPath></defs></svg></g></g></svg></g></svg>

@@ -1,0 +1,66 @@
+---
+import '../styles/global.css';
+import { SITE_THEME_COLOR, absoluteUrl, jsonLdGraph, serializeJsonLd } from '../lib/seo';
+import type { Project, SiteSeo } from '../lib/types';
+
+type Props = {
+	seo: SiteSeo;
+	title?: string;
+	description?: string;
+	projects?: Project[];
+};
+
+const { seo, title, description, projects } = Astro.props;
+
+const documentTitle = title ?? seo.title;
+const documentDescription = description ?? seo.description;
+const socialTitle = title ?? seo.ogTitle;
+const socialDescription = description ?? seo.ogDescription;
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = absoluteUrl(seo.ogImage, canonical);
+const jsonLd = serializeJsonLd(jsonLdGraph(canonical, seo, projects));
+---
+
+<!doctype html>
+<html lang={seo.locale}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta name="color-scheme" content="dark" />
+		<meta name="theme-color" content={SITE_THEME_COLOR} />
+		<meta name="description" content={documentDescription} />
+		<meta name="generator" content={Astro.generator} />
+		<link rel="canonical" href={canonical} />
+		<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+		<meta name="apple-mobile-web-app-title" content={seo.siteName} />
+		<link rel="manifest" href="/site.webmanifest" />
+		<meta property="og:site_name" content={seo.siteName} />
+		<meta property="og:title" content={socialTitle} />
+		<meta property="og:description" content={socialDescription} />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonical} />
+		<meta property="og:locale" content={seo.locale === 'en' ? 'en_US' : seo.locale} />
+		<meta property="og:image" content={ogImage} />
+		<meta property="og:image:alt" content={seo.ogImageAlt} />
+		<meta property="og:image:width" content={String(seo.ogImageWidth)} />
+		<meta property="og:image:height" content={String(seo.ogImageHeight)} />
+		<meta name="twitter:card" content={seo.twitterCard} />
+		<meta name="twitter:title" content={socialTitle} />
+		<meta name="twitter:description" content={socialDescription} />
+		<meta name="twitter:image" content={ogImage} />
+		<meta name="twitter:image:alt" content={seo.ogImageAlt} />
+		<title>{documentTitle}</title>
+		<script is:inline type="application/ld+json" set:html={jsonLd} />
+		<script is:inline>
+			document.documentElement.dataset.enhanced = '';
+		</script>
+		<slot name="head" />
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>

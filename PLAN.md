@@ -2,7 +2,7 @@
 
 Dark, sparse, Phantasm-adjacent. No traditional portfolio IA. The page *is* the skill demo.
 
-**Current phase: 1 — frontend with mock data.** Do not start Sanity or staging until Phase 1 is fully approved.
+**Current phase: 2 — Sanity + live data.** Phase 1 frontend is approved.
 
 ---
 
@@ -21,7 +21,7 @@ Dark, sparse, Phantasm-adjacent. No traditional portfolio IA. The page *is* the 
 | Deep links | None for now — tile links go straight to project URL |
 | Images | One source image + responsive `srcset` (not dual uploads) |
 | Hosting | Prefer Cloudflare Workers + Assets (existing Worker ecosystem); Vercel also OK |
-| Sanity | New personal project — **Phase 2 only** |
+| Sanity | Project `elkf1eqd`, dataset `production`. Standalone Studio in `studio/`; `web/src/lib/content.ts` is the only fetch site |
 | Scope | Design + architecture + build, with hard approval gates between phases |
 
 ### Open confirm (sort)
@@ -40,7 +40,7 @@ Work is sequential. A phase is not done when the code exists — it is done when
 | **2. Sanity + live data** | CMS, API, real images, Lighthouse, tests rerun | Phase 3 (staging) |
 | **3. Staging** | Cloudflare staging deploy | Production (later) |
 
-Do not mix mock-data UI work with CMS setup. Do not deploy staging until Phase 2 is signed off.
+Do not deploy staging until Phase 2 is signed off.
 
 ---
 
@@ -67,27 +67,23 @@ Do not mix mock-data UI work with CMS setup. Do not deploy staging until Phase 2
 ## 2. Architecture
 
 ```
-Phase 1: local mock file + WebP placeholders
-    → Astro (SSG HTML: full project list as real <a> links)
-        → Svelte 5 island (infinite field)
-
-Phase 2: Sanity (content) replaces the mock file only
-    → same Astro HTML contract
-        → same Svelte island
+studio/  Sanity Studio (standalone)
+web/     Astro SSG + Svelte island
+    → HTML contract unchanged
 ```
 
 | Layer | Responsibility |
 |-------|----------------|
-| **Content gateway** (`src/lib/content.ts`) | Only place that loads projects. Mock in Phase 1; Sanity in Phase 2 |
+| **Content gateway** (`web/src/lib/content.ts`) | Only place that loads projects **and site SEO**. Sanity is required; missing content fails the build |
 | **Astro** | Render SEO HTML; dark shell |
 | **Svelte island** | Layout math, virtualization, pan/inertia, keyboard, random tiling after primary set |
-| **Images** | Phase 1: local `srcset` WebP placeholders. Phase 2: Sanity Image CDN |
+| **Images** | Sanity Image CDN `srcset` (one source + width variants, hotspot crop) |
 
 **Progressive enhancement**
 
 1. SSR: semantic list/grid of all projects (links work with no JS)
-2. JS: hydrate island, measure viewport, build world; list remains in the document for crawlers
-3. Crawlers/SR: HTML list on first paint; after hydrate, the field is the interactive surface
+2. JS: hydrate island, measure viewport, build world; list remains in the document for crawlers (`inert` + `aria-hidden` after hydrate)
+3. Crawlers/SR: HTML list on first paint; after hydrate, skip link and keyboard land on the field
 
 **No deep links** for now — tile URL = project URL only.
 
@@ -95,7 +91,9 @@ Phase 2: Sanity (content) replaces the mock file only
 
 ## 3. Sanity (new personal project) — Phase 2
 
-Do not create the Studio or wire env secrets until Phase 1 is approved.
+Studio lives in `studio/` (standalone, not embedded). Dataset: `production` (public). Build-time fetch via `web/src/lib/content.ts`. Sanity is required: missing `siteSettings` or no published projects fails `astro build`. In dev, the homepage shows a content-unavailable message.
+
+**Commands:** `npm run studio` (localhost:3333), `npm run seed` from `studio/` (needs a write token).
 
 **Document type: `project`**
 
@@ -110,7 +108,23 @@ Do not create the Studio or wire env secrets until Phase 1 is approved.
 | `description` | text | Optional; max ~1 sentence |
 | `sortOrder` | number | Optional; **unused in v1 UI sort**, reserved for later |
 
-Mock documents in `src/data/projects.ts` already use this shape so Phase 2 is a gateway swap, not a UI rewrite.
+**Document type: `siteSettings` (singleton)**
+
+One document for the apex site — not per-project. Include an **SEO** fieldset/section that maps 1:1 to `SiteSeo`:
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `title` | string | Document `<title>` |
+| `description` | text | Meta description |
+| `siteName` | string | `og:site_name`, JSON-LD `WebSite.name` |
+| `ogTitle` | string | Share title (defaults to `title` if empty) |
+| `ogDescription` | text | Share description (defaults to `description` if empty) |
+| `ogImage` | image | Required for sharing; ~1200×630; hotspot optional |
+| `ogImageAlt` | string | Required |
+| `twitterCard` | string | `summary` \| `summary_large_image` |
+| `locale` | string | BCP 47, e.g. `en` |
+
+JSON-LD (`WebSite` + homepage `ItemList`) is **derived in the app** from `siteSettings` + the project list. Do not store raw JSON-LD in Studio.
 
 **v1 sort rule (in app, not Studio):**  
 case-insensitive title sort; ignore leading `the ` (and possibly `a `/`an ` — confirm).
@@ -175,7 +189,7 @@ Even with a large dataset, the **logical** first cycle is the full ordered set; 
 | Release | Inertia decay; stop on low velocity |
 | Wheel | Pan the field (page does not scroll) |
 | Click / tap tile | Follow `url`; `target=_blank` + `rel` if `openInNewTab` |
-| Keyboard | Focusable tiles; arrows move focus between neighbors; Enter/Space activate; skip link to list |
+| Keyboard | Focusable tiles; arrows move focus between neighbors; Enter/Space activate; skip link to list (no JS) / field (after hydrate) |
 | Reduced motion | No/weak inertia |
 
 **Touch:** one-finger pan; don’t fight vertical browser chrome; test iOS Safari. If pan fights scroll, use an explicit grab surface (the field is the page).
@@ -186,7 +200,7 @@ Even with a large dataset, the **logical** first cycle is the full ordered set; 
 
 SSR output includes:
 
-- Document title / meta (sparse, accurate)
+- Document title / meta (sparse, accurate); Open Graph + Twitter image; JSON-LD `WebSite` + homepage `ItemList`
 - Full list of projects as `<a href="…">` (title + optional description + img alt)
 - `rel="noopener noreferrer"` when new tab
 - Landmark / label for the list (visually minimal)
@@ -194,7 +208,7 @@ SSR output includes:
 
 **WCAG 2.2 AA targets:** focus visible, contrast, target size, motion, keyboard operability, name/role/value for links, alt text.
 
-**SEO / AI SEO:** real HTML links + text; optional `ItemList` JSON-LD later; sitemap = apex only for now (no deep links). Canonical = apex.
+**SEO / AI SEO:** real HTML links + text; JSON-LD `WebSite` + homepage `ItemList` from site SEO + projects; sitemap = apex only for now (no deep links). Canonical = apex.
 
 ---
 
@@ -237,16 +251,17 @@ Optional later: Storybook for `Tile` — not blocking v1.
 
 - Astro app, dark Phantasm-adjacent shell, Cloudflare-ready static output
 - Mock projects in `src/data/projects.ts` (Sanity-shaped)
+- Mock site SEO in `src/data/seo.ts` (`siteSettings` SEO section)
 - Local WebP placeholders (`srcset` widths)
 - SSR HTML list of every project (sorted) for no-JS / crawlers
 - Svelte island: fluid columns, primary board, overscan, pan + inertia, virtualization, infinite seeded tiles
-- Keyboard map, skip link, `prefers-reduced-motion`, visible focus
+- Keyboard map, skip link (list without JS; field after hydrate), `prefers-reduced-motion`, visible focus
 
 **Test pass (required)**
 
 - Design: sparse field, overscan readable on phone and ultrawide, hover/focus description does not clutter
 - Accessibility: axe (WCAG 2.2 AA tags), keyboard path, contrast, target size, reduced motion, no-JS list
-- SEO: title, description, canonical, real `<a>` links, alt text, sitemap/robots, new-tab `rel`
+- SEO: title, description, canonical, `og:image` / Twitter image, JSON-LD, real `<a>` links, alt text, sitemap/robots, new-tab `rel`
 - Responsiveness: mobile, tablet, desktop; tiles stay legible; pan does not fight layout
 
 **Gate:** full approval of Phase 1. No Sanity project, no API tokens, no staging deploy until this is signed off.
@@ -255,11 +270,10 @@ Optional later: Storybook for `Tile` — not blocking v1.
 
 **Build**
 
-- Create Sanity project + `project` schema
-- Connect via `src/lib/content.ts` only
+- Create Sanity project + `project` schema + `siteSettings` singleton (SEO section required)
+- Connect via `web/src/lib/content.ts` only (`getProjects`, `getSiteSeo`)
 - Replace mock documents with real ones (seed: Autobahn, DR-101, Juno, Kijkdoos, Mobey Run, Phantasm, LinkedIn, Ell Creative, optional extras)
-- Swap placeholders for Sanity images + CDN `srcset` / hotspot
-- Keep the same HTML contract and island behavior
+- Sanity images + CDN `srcset` / hotspot; no local placeholder fallback
 
 **Test pass (required)**
 
