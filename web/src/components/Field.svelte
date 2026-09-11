@@ -238,6 +238,9 @@
 		const THROW_SCALE = 19;
 		const STOP_SPEED = 0.15;
 		const RELEASE_BOOST = 1.05;
+		const DRAG = 5;
+		let originX = 0;
+		let originY = 0;
 
 		const stopInertia = () => {
 			if (inertiaId) cancelAnimationFrame(inertiaId);
@@ -250,6 +253,8 @@
 			pointerId = event.pointerId;
 			lastX = event.clientX;
 			lastY = event.clientY;
+			originX = event.clientX;
+			originY = event.clientY;
 			lastT = event.timeStamp;
 			vx = 0;
 			vy = 0;
@@ -260,17 +265,20 @@
 			grabY = event.clientY;
 			warpX = 0;
 			warpY = 0;
-			grabbing = true;
-			dragging = true;
-			kickParticles();
-			node.setPointerCapture(event.pointerId);
 		};
 
 		const onPointerMove = (event: PointerEvent) => {
 			if (pointerId !== event.pointerId) return;
+			if (!moved) {
+				if (Math.hypot(event.clientX - originX, event.clientY - originY) <= DRAG) return;
+				moved = true;
+				grabbing = true;
+				dragging = true;
+				kickParticles();
+				node.setPointerCapture(event.pointerId);
+			}
 			const dx = event.clientX - lastX;
 			const dy = event.clientY - lastY;
-			if (Math.hypot(dx, dy) > 2) moved = true;
 			const dt = Math.max(8, event.timeStamp - lastT);
 			const sampleVx = (dx / dt) * THROW_SCALE;
 			const sampleVy = (dy / dt) * THROW_SCALE;
@@ -322,6 +330,9 @@
 
 		const onPointerUp = (event: PointerEvent) => {
 			if (pointerId !== event.pointerId) return;
+			if (node.hasPointerCapture(event.pointerId)) {
+				node.releasePointerCapture(event.pointerId);
+			}
 			pointerId = null;
 			dragging = false;
 			grabbing = false;

@@ -55,13 +55,18 @@
 
 <style>
 	.tile {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		background: var(--tile-wash);
 		border: 1px solid var(--line);
 		overflow: hidden;
 		user-select: none;
-		cursor: grab;
+	}
+
+	.tile:focus-within {
+		outline: 2px solid var(--focus);
+		outline-offset: -2px;
 	}
 
 	img {
@@ -88,9 +93,10 @@
 		cursor: pointer;
 	}
 
-	.meta:focus-visible {
-		outline: 2px solid var(--focus);
-		outline-offset: -2px;
+	.meta::after {
+		content: '';
+		position: absolute;
+		inset: 0;
 	}
 
 	.title {
