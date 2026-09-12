@@ -78,6 +78,34 @@ test.describe('homepage', () => {
 		await expect(page.locator('.project-list')).toBeHidden();
 		const homepageHtml = await (await page.request.get('/')).text();
 		expect(homepageHtml).not.toMatch(/<script[^>]+src=["'][^"']*googletagmanager/);
+		const fontFace = await page.evaluate(() => {
+			for (const sheet of document.styleSheets) {
+				try {
+					for (const rule of sheet.cssRules) {
+						if (!(rule instanceof CSSFontFaceRule)) continue;
+						const family = rule.style.getPropertyValue('font-family');
+						if (!/Atkinson Hyperlegible Next/i.test(family)) continue;
+						const src = rule.style.getPropertyValue('src');
+						const match = /url\(["']?([^"')]+)["']?\)/.exec(src);
+						return {
+							family,
+							display: rule.style.getPropertyValue('font-display'),
+							path: match ? new URL(match[1], location.href).pathname : null,
+						};
+					}
+				} catch {
+					/* cross-origin sheets */
+				}
+			}
+			return null;
+		});
+		expect(fontFace).toBeTruthy();
+		expect(fontFace!.family).toMatch(/^["']?Atkinson Hyperlegible Next["']?$/);
+		expect(fontFace!.display).toBe('swap');
+		expect(fontFace!.path).toMatch(/\.woff2$/);
+		const fontResponse = await page.request.get(fontFace!.path!);
+		expect(fontResponse.ok()).toBe(true);
+		expect(fontResponse.headers()['content-type']).toMatch(/font|woff2/);
 		await expect(page.locator('link[rel="preconnect"][href="https://cdn.sanity.io"]')).toHaveCount(
 			1,
 		);
@@ -87,6 +115,10 @@ test.describe('homepage', () => {
 		const preload = page.locator('link[rel="preload"][as="image"]');
 		await expect(preload).toHaveCount(1);
 		await expect(preload).toHaveAttribute('imagesizes', '(max-width: 727px) 160px, 280px');
+		await expect(page.locator('link[rel="preload"][as="font"]')).toHaveCount(0);
+		const fontFamily = await page.locator('body').evaluate((el) => getComputedStyle(el).fontFamily);
+		expect(fontFamily).toMatch(/Atkinson Hyperlegible Next/);
+		expect(fontFamily).not.toMatch(/Atkinson Hyperlegible Next-/);
 
 		const list = page.locator('#projects a');
 		const count = await list.count();
