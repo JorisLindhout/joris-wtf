@@ -111,13 +111,6 @@
 		opacity: 0.78;
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		img {
-			opacity: 0.78;
-			transition: none;
-		}
-	}
-
 	.meta {
 		flex: 1 1 auto;
 		min-height: var(--title-block, 44px);
@@ -155,24 +148,42 @@
 	}
 
 	.desc {
-		display: none;
+		display: block;
+		max-height: 0;
+		opacity: 0;
+		overflow: hidden;
 		color: var(--fg-muted);
 		font-size: 0.75rem;
 		line-height: 1.4;
 		white-space: nowrap;
-		overflow: hidden;
 		text-overflow: ellipsis;
+		transition:
+			max-height 180ms ease,
+			opacity 180ms ease;
 	}
 
 	.tile:hover .desc,
 	.tile:focus-within .desc,
 	.meta:focus-visible .desc {
-		display: block;
+		max-height: 1.4em;
+		opacity: 1;
 	}
 
 	@media (hover: none) {
 		.desc {
-			display: block;
+			max-height: 1.4em;
+			opacity: 1;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		img {
+			opacity: 0.78;
+			transition: none;
+		}
+
+		.desc {
+			transition: none;
 		}
 	}
 </style>
