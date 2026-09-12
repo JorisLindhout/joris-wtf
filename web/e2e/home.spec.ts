@@ -73,7 +73,20 @@ test.describe('homepage', () => {
 			'@type': 'ItemList',
 		});
 
-		await expect(page.locator('link[rel="preload"][as="image"]')).toHaveCount(1);
+		await expect(page.locator('html')).toHaveAttribute('data-enhanced', '');
+		await expect(page.locator('#projects')).toHaveAttribute('aria-hidden', 'true');
+		await expect(page.locator('.project-list')).toBeHidden();
+		const homepageHtml = await (await page.request.get('/')).text();
+		expect(homepageHtml).not.toMatch(/<script[^>]+src=["'][^"']*googletagmanager/);
+		await expect(page.locator('link[rel="preconnect"][href="https://cdn.sanity.io"]')).toHaveCount(
+			1,
+		);
+		await expect(page.locator('link[rel="dns-prefetch"][href="https://cdn.sanity.io"]')).toHaveCount(
+			1,
+		);
+		const preload = page.locator('link[rel="preload"][as="image"]');
+		await expect(preload).toHaveCount(1);
+		await expect(preload).toHaveAttribute('imagesizes', '(max-width: 727px) 160px, 280px');
 
 		const list = page.locator('#projects a');
 		const count = await list.count();
@@ -108,7 +121,8 @@ test.describe('homepage', () => {
 
 	test('has no serious axe violations on first paint', async ({ page }) => {
 		await page.goto('/');
-		await page.locator('.field').waitFor();
+		await expect(page.locator('html')).toHaveAttribute('data-field', 'ready');
+		await page.locator('.field.ready .tile').first().waitFor();
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag22aa', 'best-practice'])
 			.analyze();
@@ -121,7 +135,7 @@ test.describe('homepage', () => {
 
 	test('hydrates a pannable field with overscan tiles', async ({ page }) => {
 		await page.goto('/');
-		const field = page.locator('.field');
+		const field = page.locator('.field.ready');
 		await expect(field).toBeVisible();
 		await expect(page.locator('.field .tile').first()).toBeVisible();
 		const listCount = await page.locator('#projects a').count();
@@ -180,6 +194,7 @@ test.describe('homepage', () => {
 
 	test('keeps the skip link and keyboard path to the field', async ({ page }) => {
 		await page.goto('/');
+		await expect(page.locator('html')).toHaveAttribute('data-field', 'ready');
 		const field = page.locator('#field');
 		await field.waitFor();
 		const skip = page.locator('.skip-link');
@@ -246,9 +261,36 @@ test.describe('homepage', () => {
 		if (testInfo.project.name === 'mobile') {
 			await expect(desc).toBeVisible();
 		} else {
-			await expect(desc).toBeHidden();
-			await page.locator('.field .tile').filter({ has: desc }).first().hover();
-			await expect(desc).toBeVisible();
+			const tile = page
+				.locator('.field .tile')
+				.filter({ has: page.locator('a[tabindex="0"]') })
+				.first();
+			await expect(tile.locator('.desc')).toBeHidden();
+			await tile.hover();
+			await expect(tile.locator('.desc')).toBeVisible();
 		}
+	});
+
+	test('keeps #field and #projects targets after hydrate', async ({ page }) => {
+		await page.goto('/#projects');
+		await expect(page.locator('#projects')).toBeAttached();
+		await expect(page.locator('html')).toHaveAttribute('data-field', 'ready');
+		await page.goto('/#field');
+		await expect(page.locator('#field.ready')).toBeVisible();
+	});
+});
+
+test.describe('homepage without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('paints the SSR project list as first paint', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.locator('.project-list a').first()).toBeVisible();
+		await expect(page.locator('html')).not.toHaveAttribute('data-enhanced');
+		await expect(page.locator('html')).not.toHaveAttribute('data-field', 'ready');
+		await expect(page.locator('.skip-link')).toHaveAttribute('href', /#projects$/);
+		await expect(page.locator('#projects')).not.toHaveAttribute('aria-hidden');
+		await expect(page.locator('.field.ready')).toHaveCount(0);
+		await expect(page.locator('.field .tile')).toHaveCount(0);
 	});
 });

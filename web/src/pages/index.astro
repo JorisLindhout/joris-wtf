@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import Field from '../components/Field.svelte';
 import Layout from '../layouts/Layout.astro';
 import { getProjects, getSiteSeo } from '../lib/content';
@@ -36,7 +37,7 @@ const lcp = content.ok ? content.projects[0] : undefined;
 							type="image/webp"
 							href={srcFor(lcp)}
 							imagesrcset={srcsetFor(lcp)}
-							imagesizes="280px"
+							imagesizes="(max-width: 727px) 160px, 280px"
 							fetchpriority="high"
 						/>
 					) : null
@@ -63,17 +64,20 @@ const lcp = content.ok ? content.projects[0] : undefined;
 										target={project.openInNewTab ? '_blank' : undefined}
 										rel={project.openInNewTab ? 'noopener noreferrer' : undefined}
 									>
-										<img
-											src={srcFor(project)}
-											srcset={srcsetFor(project)}
-											sizes={sizesFor(220)}
-											width="640"
-											height="480"
-											alt={project.thumbnailAlt}
-											loading="lazy"
-											decoding="async"
-											fetchpriority="low"
-										/>
+										<span class="shot">
+											<Image
+												src={srcFor(project)}
+												srcset={srcsetFor(project)}
+												sizes={sizesFor(220)}
+												width={220}
+												height={165}
+												alt={project.thumbnailAlt}
+												layout="none"
+												loading="lazy"
+												decoding="async"
+												fetchpriority="low"
+											/>
+										</span>
 										<span class="title">{project.title}</span>
 										{project.description ? <span class="desc">{project.description}</span> : null}
 									</a>
@@ -85,9 +89,15 @@ const lcp = content.ok ? content.projects[0] : undefined;
 				<script is:inline>
 					(() => {
 						const nav = document.getElementById('projects');
-						if (!nav || document.documentElement.dataset.enhanced == null) return;
-						nav.setAttribute('aria-hidden', 'true');
-						nav.inert = true;
+						if (nav instanceof HTMLElement) {
+							nav.setAttribute('aria-hidden', 'true');
+							nav.inert = true;
+						}
+						const skip = document.querySelector('.skip-link');
+						if (skip instanceof HTMLAnchorElement) {
+							if (skip.dataset.fieldHref) skip.href = skip.dataset.fieldHref;
+							if (skip.dataset.fieldLabel) skip.textContent = skip.dataset.fieldLabel;
+						}
 					})();
 				</script>
 

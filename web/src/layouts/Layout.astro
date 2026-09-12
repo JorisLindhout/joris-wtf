@@ -24,11 +24,49 @@ const googleAnalyticsId = import.meta.env.PUBLIC_GOOGLE_ANALYTICS_ID;
 const gtagLoader = googleAnalyticsId
 	? `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(googleAnalyticsId)}`
 	: '';
-const gtagConfig = googleAnalyticsId
-	? `window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', ${JSON.stringify(googleAnalyticsId)});`
+const gtagBoot = googleAnalyticsId
+	? `(() => {
+	const src = ${JSON.stringify(gtagLoader)};
+	const id = ${JSON.stringify(googleAnalyticsId)};
+	let loaded = false;
+	const load = () => {
+		if (loaded) return;
+		loaded = true;
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		window.gtag = gtag;
+		gtag('js', new Date());
+		gtag('config', id);
+		const el = document.createElement('script');
+		el.src = src;
+		el.async = true;
+		document.head.appendChild(el);
+	};
+	const start = () => {
+		if (typeof requestIdleCallback === 'function') {
+			requestIdleCallback(load, { timeout: 4000 });
+		} else {
+			window.setTimeout(load, 0);
+		}
+	};
+	const html = document.documentElement;
+	if (html.getAttribute('data-field') === 'ready') {
+		start();
+		return;
+	}
+	let observer;
+	const done = () => {
+		observer.disconnect();
+		window.removeEventListener('load', done);
+		start();
+	};
+	observer = new MutationObserver(() => {
+		if (html.getAttribute('data-field') === 'ready') done();
+	});
+	observer.observe(html, { attributes: true, attributeFilter: ['data-field'] });
+	if (document.readyState === 'complete') done();
+	else window.addEventListener('load', done);
+})();`
 	: '';
 ---
 
@@ -37,14 +75,27 @@ gtag('config', ${JSON.stringify(googleAnalyticsId)});`
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-		{
-			googleAnalyticsId ? (
-				<>
-					<script is:inline async src={gtagLoader}></script>
-					<script is:inline set:html={gtagConfig} />
-				</>
-			) : null
-		}
+		<script is:inline>
+			document.documentElement.dataset.enhanced = '';
+		</script>
+		<style is:inline>
+			html[data-enhanced],
+			html[data-enhanced] body {
+				height: 100%;
+				overflow: hidden;
+				background: #070708;
+			}
+			html[data-enhanced] .project-list {
+				display: none;
+			}
+			html[data-enhanced] .field-host {
+				position: fixed;
+				inset: 0;
+				background: #070708;
+			}
+		</style>
+		<link rel="preconnect" href="https://cdn.sanity.io" />
+		<link rel="dns-prefetch" href="https://cdn.sanity.io" />
 		<meta name="color-scheme" content="dark" />
 		<meta name="theme-color" content={SITE_THEME_COLOR} />
 		<meta name="description" content={documentDescription} />
@@ -73,12 +124,10 @@ gtag('config', ${JSON.stringify(googleAnalyticsId)});`
 		<meta name="twitter:image:alt" content={seo.ogImageAlt} />
 		<title>{documentTitle}</title>
 		<script is:inline type="application/ld+json" set:html={jsonLd} />
-		<script is:inline>
-			document.documentElement.dataset.enhanced = '';
-		</script>
 		<slot name="head" />
 	</head>
 	<body>
 		<slot />
+		{googleAnalyticsId ? <script is:inline set:html={gtagBoot} /> : null}
 	</body>
 </html>

@@ -24,6 +24,25 @@
 
 	const rel = $derived(project.openInNewTab ? 'noopener noreferrer' : undefined);
 	const target = $derived(project.openInNewTab ? '_blank' : undefined);
+	const src = $derived(srcFor(project));
+	const shotW = $derived(Math.max(1, Math.round(width)));
+	const shotH = $derived(Math.max(1, Math.round(width * 0.75)));
+
+	function paintWhenReady(node: HTMLImageElement) {
+		void src;
+		node.classList.remove('painted');
+		const paint = () => node.classList.add('painted');
+		if (node.complete) {
+			paint();
+			return;
+		}
+		node.addEventListener('load', paint);
+		node.addEventListener('error', paint);
+		return () => {
+			node.removeEventListener('load', paint);
+			node.removeEventListener('error', paint);
+		};
+	}
 </script>
 
 <article
@@ -33,18 +52,21 @@
 	style:width="{width}px"
 	style:height="{height}px"
 >
-	<img
-		src={srcFor(project)}
-		srcset={srcsetFor(project)}
-		sizes={sizesFor(width)}
-		width="640"
-		height="480"
-		alt=""
-		{loading}
-		{fetchpriority}
-		decoding="async"
-		draggable="false"
-	/>
+	<div class="shot" aria-hidden="true">
+		<img
+			{src}
+			srcset={srcsetFor(project)}
+			sizes={sizesFor(width)}
+			width={shotW}
+			height={shotH}
+			alt=""
+			{loading}
+			{fetchpriority}
+			decoding="async"
+			draggable="false"
+			{@attach paintWhenReady}
+		/>
+	</div>
 	<a class="meta" href={project.url} {target} rel={rel} tabindex={tabIndex} draggable="false">
 		<span class="copy">
 			<span class="title">{project.title}</span>
@@ -57,6 +79,8 @@
 
 <style>
 	.tile {
+		display: flex;
+		flex-direction: column;
 		position: relative;
 		background: var(--tile-wash);
 		border: 1px solid var(--line);
@@ -64,18 +88,39 @@
 		user-select: none;
 	}
 
+	.shot {
+		flex: 0 0 auto;
+		width: 100%;
+		aspect-ratio: 4 / 3;
+		position: relative;
+		background: var(--tile-wash);
+	}
+
 	img {
-		display: block;
+		position: absolute;
+		inset: 0;
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		opacity: 0.78;
+		opacity: 0;
 		pointer-events: none;
+		transition: opacity 180ms ease;
+	}
+
+	img:global(.painted) {
+		opacity: 0.78;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		img {
+			opacity: 0.78;
+			transition: none;
+		}
 	}
 
 	.meta {
-		position: absolute;
-		inset: 0;
+		flex: 1 1 auto;
+		min-height: var(--title-block, 44px);
 		display: flex;
 		flex-direction: column;
 		justify-content: flex-end;

@@ -48,6 +48,7 @@
 	const layout = $derived(
 		width > 0 && projects.length > 0 ? computeLayout(width, projects.length, TITLE_BLOCK) : null,
 	);
+	const fieldReady = $derived(layout != null);
 	const origin = $derived(
 		layout && width > 0 && height > 0 ? initialCamera(layout, width, height) : { x: 0, y: 0 },
 	);
@@ -67,6 +68,33 @@
 		apply();
 		window.addEventListener('resize', apply);
 		return () => window.removeEventListener('resize', apply);
+	});
+
+	$effect(() => {
+		if (!fieldReady) return;
+
+		document.documentElement.dataset.field = 'ready';
+		const list = document.getElementById('projects');
+		list?.setAttribute('aria-hidden', 'true');
+		if (list instanceof HTMLElement) list.inert = true;
+
+		const skip = document.querySelector('.skip-link');
+		const skipHref = skip instanceof HTMLAnchorElement ? skip.href : null;
+		const skipLabel = skip instanceof HTMLAnchorElement ? skip.textContent : null;
+		if (skip instanceof HTMLAnchorElement) {
+			if (skip.dataset.fieldHref) skip.href = skip.dataset.fieldHref;
+			if (skip.dataset.fieldLabel) skip.textContent = skip.dataset.fieldLabel;
+		}
+
+		return () => {
+			delete document.documentElement.dataset.field;
+			list?.removeAttribute('aria-hidden');
+			if (list instanceof HTMLElement) list.inert = false;
+			if (skip instanceof HTMLAnchorElement) {
+				if (skipHref !== null) skip.href = skipHref;
+				if (skipLabel !== null) skip.textContent = skipLabel;
+			}
+		};
 	});
 
 	function grain(x: number, y: number) {
@@ -227,18 +255,8 @@
 
 	function fieldSurface(node: HTMLElement) {
 		root = node;
-		document.documentElement.dataset.field = 'ready';
-		const list = document.getElementById('projects');
-		list?.setAttribute('aria-hidden', 'true');
-		if (list instanceof HTMLElement) list.inert = true;
 
 		const skip = document.querySelector('.skip-link');
-		const skipHref = skip instanceof HTMLAnchorElement ? skip.href : null;
-		const skipLabel = skip instanceof HTMLAnchorElement ? skip.textContent : null;
-		if (skip instanceof HTMLAnchorElement) {
-			if (skip.dataset.fieldHref) skip.href = skip.dataset.fieldHref;
-			if (skip.dataset.fieldLabel) skip.textContent = skip.dataset.fieldLabel;
-		}
 
 		const focusFirstTile = () => {
 			node.querySelector<HTMLElement>('a[tabindex="0"]')?.focus({ preventScroll: true });
@@ -415,12 +433,7 @@
 			stopInertia();
 			stopParticles();
 			root = undefined;
-			delete document.documentElement.dataset.field;
-			list?.removeAttribute('aria-hidden');
-			if (list instanceof HTMLElement) list.inert = false;
 			if (skip instanceof HTMLAnchorElement) {
-				if (skipHref !== null) skip.href = skipHref;
-				if (skipLabel !== null) skip.textContent = skipLabel;
 				skip.removeEventListener('click', onSkipClick);
 			}
 			node.removeEventListener('pointerdown', onPointerDown);
@@ -442,6 +455,7 @@
 	id="field"
 	tabindex="-1"
 	class:dragging
+	class:ready={fieldReady}
 	role="region"
 	aria-label="Project field. Tab through visible projects, arrow keys move to adjacent tiles."
 	bind:clientWidth={width}
@@ -492,7 +506,13 @@
 		overflow-anchor: none;
 		touch-action: none;
 		cursor: grab;
+		background: transparent;
+		pointer-events: none;
+	}
+
+	.field.ready {
 		background: var(--bg);
+		pointer-events: auto;
 	}
 
 	.field:focus {

@@ -40,12 +40,8 @@ body {
 }
 
 html[data-enhanced],
-html[data-field='ready'] {
-	height: 100%;
-	overflow: hidden;
-}
-
 html[data-enhanced] body,
+html[data-field='ready'],
 html[data-field='ready'] body {
 	height: 100%;
 	overflow: hidden;
@@ -103,14 +99,23 @@ html[data-field='ready'] body {
 	outline-offset: 4px;
 }
 
-.project-list img {
+.project-list .shot {
 	display: block;
+	position: relative;
 	width: 100%;
-	height: auto;
 	aspect-ratio: 4 / 3;
-	object-fit: cover;
 	background: var(--tile);
 	border: 1px solid var(--line);
+	overflow: hidden;
+}
+
+.project-list img {
+	position: absolute;
+	inset: 0;
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
 }
 
 .project-list .title {
@@ -124,30 +129,7 @@ html[data-field='ready'] body {
 
 html[data-enhanced] .project-list,
 html[data-field='ready'] .project-list {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 1px;
-	height: 1px;
-	padding: 0;
-	margin: -1px;
-	overflow: hidden;
-	clip: rect(0, 0, 0, 0);
-	clip-path: inset(50%);
-	white-space: nowrap;
-	border: 0;
-}
-
-.field-root {
 	display: none;
-}
-
-html[data-field='ready'] .field-root {
-	display: block;
-}
-
-astro-dev-toolbar {
-	display: none !important;
 }
 
 .field-host,
@@ -156,10 +138,23 @@ astro-dev-toolbar {
 	inset: 0;
 	z-index: 1;
 	display: block;
+	pointer-events: none;
+	background: transparent;
+}
+
+html[data-enhanced] .field-host,
+html[data-enhanced] .field-host astro-island,
+html[data-field='ready'] .field-host,
+html[data-field='ready'] .field-host astro-island {
 	background-color: var(--bg);
 	background-image: radial-gradient(
 		ellipse 90% 80% at 50% 42%,
 		transparent 52%,
 		rgba(7, 7, 8, 0.42) 100%
 	);
+}
+
+html[data-field='ready'] .field-host,
+html[data-field='ready'] .field-host astro-island {
+	pointer-events: auto;
 }
