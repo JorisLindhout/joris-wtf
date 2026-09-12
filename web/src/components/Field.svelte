@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
+	import { Spring } from 'svelte/motion';
 	import { MediaQuery } from 'svelte/reactivity';
 	import Tile from './Tile.svelte';
 	import type { Project } from '../lib/types';
@@ -45,6 +46,20 @@
 	let particleId = 0;
 
 	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
+	const TILT_MAX = 12;
+	const TILT_GAIN = 0.04;
+	const tilt = new Spring({ x: 0, y: 0 }, { stiffness: 0.16, damping: 0.58, precision: 0.02 });
+
+	function clamp(n: number, min: number, max: number) {
+		return Math.max(min, Math.min(max, n));
+	}
+
+	function tiltFromDrag(wx: number, wy: number) {
+		return {
+			x: clamp(-wy * TILT_GAIN, -TILT_MAX, TILT_MAX),
+			y: clamp(-wx * TILT_GAIN, -TILT_MAX, TILT_MAX),
+		};
+	}
 
 	const layout = $derived(
 		width > 0 && projects.length > 0 ? computeLayout(width, projects.length, TITLE_BLOCK) : null,
@@ -141,7 +156,7 @@
 			const dist = Math.hypot(cx - grabWX, cy - grabWY);
 			const proximity = Math.exp(-dist / radius);
 			const jitter = 0.55 + grain(p.cx, p.cy) * 0.85;
-			const follow = 0.38 + proximity * 1.02;
+			const follow = 0.55 + proximity * 0.62;
 			const tx = grabbing ? -warpX * (follow - 1) : 0;
 			const ty = grabbing ? -warpY * (follow - 1) : 0;
 			const stiff = (0.032 + proximity * 0.13) * jitter;
@@ -348,6 +363,7 @@
 			if (!reducedMotion.current) {
 				warpX = panX - startPanX;
 				warpY = panY - startPanY;
+				tilt.target = tiltFromDrag(warpX, warpY);
 				stepParticles();
 				kickParticles();
 			}
@@ -397,6 +413,9 @@
 			grabbing = false;
 			warpX = 0;
 			warpY = 0;
+			if (!reducedMotion.current) {
+				void tilt.set({ x: 0, y: 0 }, { preserveMomentum: 180 });
+			}
 			kickParticles();
 			if (moved) startInertia();
 		};
@@ -408,6 +427,7 @@
 			grabbing = false;
 			warpX = 0;
 			warpY = 0;
+			void tilt.set({ x: 0, y: 0 }, { instant: true });
 			clearParticles();
 			panX += event.deltaX;
 			panY += event.deltaY;
@@ -449,6 +469,7 @@
 			stopInertia();
 			stopParticles();
 			pointerActive = false;
+			void tilt.set({ x: 0, y: 0 }, { instant: true });
 			root = undefined;
 			if (skip instanceof HTMLAnchorElement) {
 				skip.removeEventListener('click', onSkipClick);
@@ -490,26 +511,35 @@
 				></div>
 			{/each}
 		</div>
-		<div class="world" style:transform="translate3d({-camX}px, {-camY}px, 0)">
-			{#each cells as cell (`${cell.x}:${cell.y}`)}
-				{@const shift = tileShift(cell.x, cell.y)}
-				<div
-					class="cell"
-					data-stretch="{shift.x.toFixed(1)},{shift.y.toFixed(1)}"
-					style:transform="translate3d({cell.x * layout.cellW + shift.x}px, {cell.y * layout.cellH + shift.y}px, 0)"
-				>
-					<Tile
-						project={projectAt(cell.x, cell.y, layout)}
-						cellX={cell.x}
-						cellY={cell.y}
-						width={layout.tileW}
-						height={layout.tileH}
-						tabIndex={layout && (isTabStop(cell.x, cell.y, layout) || (cell.x === focusX && cell.y === focusY)) ? 0 : -1}
-						loading="eager"
-						fetchpriority={cell.x === 0 && cell.y === 0 ? 'high' : 'auto'}
-					/>
+		<div class="lens">
+			<div
+				class="stage"
+				style:transform={reducedMotion.current
+					? undefined
+					: `rotateX(${tilt.current.x}deg) rotateY(${tilt.current.y}deg)`}
+			>
+				<div class="world" style:transform="translate3d({-camX}px, {-camY}px, 0)">
+					{#each cells as cell (`${cell.x}:${cell.y}`)}
+						{@const shift = tileShift(cell.x, cell.y)}
+						<div
+							class="cell"
+							data-stretch="{shift.x.toFixed(1)},{shift.y.toFixed(1)}"
+							style:transform="translate3d({cell.x * layout.cellW + shift.x}px, {cell.y * layout.cellH + shift.y}px, 0)"
+						>
+							<Tile
+								project={projectAt(cell.x, cell.y, layout)}
+								cellX={cell.x}
+								cellY={cell.y}
+								width={layout.tileW}
+								height={layout.tileH}
+								tabIndex={layout && (isTabStop(cell.x, cell.y, layout) || (cell.x === focusX && cell.y === focusY)) ? 0 : -1}
+								loading="eager"
+								fetchpriority={cell.x === 0 && cell.y === 0 ? 'high' : 'auto'}
+							/>
+						</div>
+					{/each}
 				</div>
-			{/each}
+			</div>
 		</div>
 	{/if}
 </div>
@@ -529,6 +559,32 @@
 		cursor: grab;
 		background: transparent;
 		pointer-events: none;
+	}
+
+	.lens {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		perspective: 900px;
+		perspective-origin: 50% 48%;
+		transform-style: preserve-3d;
+	}
+
+	.stage {
+		position: absolute;
+		inset: 0;
+		transform-origin: 50% 50%;
+		transform-style: preserve-3d;
+	}
+
+	.field.dragging .stage {
+		will-change: transform;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.lens {
+			perspective: none;
+		}
 	}
 
 	.field.ready {
