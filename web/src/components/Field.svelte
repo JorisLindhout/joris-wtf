@@ -44,15 +44,22 @@
 	const particles = new Map<string, Particle>();
 	let grabbing = false;
 	let pointerActive = false;
+	let ignoreFocusPan = false;
 	let particleId = 0;
 
 	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
+	const coarsePointer = new MediaQuery('(pointer: coarse)');
 	const TILT_MAX = 12;
 	const TILT_GAIN = 0.04;
 	const tilt = new Spring({ x: 0, y: 0 }, { stiffness: 0.16, damping: 0.58, precision: 0.02 });
 
 	function clamp(n: number, min: number, max: number) {
 		return Math.max(min, Math.min(max, n));
+	}
+
+	function tileFromTarget(target: EventTarget | null) {
+		if (!(target instanceof Element)) return null;
+		return target.closest('.tile');
 	}
 
 	function tiltFromDrag(wx: number, wy: number) {
@@ -275,7 +282,7 @@
 		const [x, y] = (cell.getAttribute('data-cell') ?? '0,0').split(',').map(Number);
 		focusX = x;
 		focusY = y;
-		if (layout && !pointerActive) ensureVisible(x, y, layout);
+		if (layout && !pointerActive && !ignoreFocusPan) ensureVisible(x, y, layout);
 	}
 
 	function fieldSurface(node: HTMLElement) {
@@ -302,11 +309,15 @@
 		let inertiaId = 0;
 		let startPanX = 0;
 		let startPanY = 0;
+		let pressTile: Element | null = null;
+		let suppressClickUntil = 0;
 
 		const THROW_SCALE = 19;
 		const STOP_SPEED = 0.15;
 		const RELEASE_BOOST = 1.05;
-		const DRAG = 5;
+		const FINE_SLOP = 5;
+		const COARSE_SLOP = 12;
+		const CLICK_SUPPRESS_MS = 450;
 		let originX = 0;
 		let originY = 0;
 
@@ -323,6 +334,7 @@
 		const onPointerDown = (event: PointerEvent) => {
 			if (event.button !== 0) return;
 			stopInertia();
+			ignoreFocusPan = false;
 			pointerActive = true;
 			pointerId = event.pointerId;
 			lastX = event.clientX;
@@ -333,6 +345,7 @@
 			vx = 0;
 			vy = 0;
 			moved = false;
+			pressTile = tileFromTarget(event.target);
 			startPanX = panX;
 			startPanY = panY;
 			const local = localPoint(event);
@@ -351,7 +364,8 @@
 			if (pointerId !== event.pointerId) return;
 			if (event.pointerType === 'mouse' && event.buttons !== 1) return;
 			if (!moved) {
-				if (Math.hypot(event.clientX - originX, event.clientY - originY) <= DRAG) return;
+				const slop = coarsePointer.current ? COARSE_SLOP : FINE_SLOP;
+				if (Math.hypot(event.clientX - originX, event.clientY - originY) <= slop) return;
 				moved = true;
 				grabbing = true;
 				dragging = true;
@@ -411,13 +425,17 @@
 			inertiaId = requestAnimationFrame(step);
 		};
 
-		const onPointerUp = (event: PointerEvent) => {
+		const finishPointer = (event: PointerEvent, cancelled: boolean) => {
 			if (pointerId !== event.pointerId) return;
 			if (node.hasPointerCapture(event.pointerId)) {
 				node.releasePointerCapture(event.pointerId);
 			}
+			const endTile = tileFromTarget(event.target);
+			const tappedTile =
+				!cancelled && !moved && pressTile != null && endTile === pressTile
+					? pressTile
+					: null;
 			pointerId = null;
-			pointerActive = false;
 			dragging = false;
 			grabbing = false;
 			warpX = 0;
@@ -426,8 +444,17 @@
 				void tilt.set({ x: 0, y: 0 }, { preserveMomentum: 180 });
 			}
 			kickParticles();
-			if (moved) startInertia();
+			if (moved) {
+				suppressClickUntil = performance.now() + CLICK_SUPPRESS_MS;
+				startInertia();
+			}
+			if (tappedTile) ignoreFocusPan = true;
+			pointerActive = false;
+			pressTile = null;
 		};
+
+		const onPointerUp = (event: PointerEvent) => finishPointer(event, false);
+		const onPointerCancel = (event: PointerEvent) => finishPointer(event, true);
 
 		const onWheel = (event: WheelEvent) => {
 			event.preventDefault();
@@ -443,12 +470,24 @@
 		};
 
 		const onClick = (event: MouseEvent) => {
-			if (!moved) return;
+			if (moved || performance.now() < suppressClickUntil) {
+				event.preventDefault();
+				event.stopPropagation();
+				return;
+			}
+			const tile = tileFromTarget(event.target);
+			if (!tile) return;
+			if (event.target instanceof Element && event.target.closest('a.meta')) return;
+			const link = tile.querySelector('a.meta');
+			if (!(link instanceof HTMLAnchorElement)) return;
 			event.preventDefault();
 			event.stopPropagation();
+			link.click();
+			if (coarsePointer.current) link.blur();
 		};
 
 		const onNodeKeydown = (event: KeyboardEvent) => {
+			ignoreFocusPan = false;
 			if (!node.contains(event.target as Node | null)) return;
 			onKeydown(event);
 		};
@@ -466,7 +505,7 @@
 		node.addEventListener('pointerdown', onPointerDown);
 		node.addEventListener('pointermove', onPointerMove, { passive: false });
 		node.addEventListener('pointerup', onPointerUp);
-		node.addEventListener('pointercancel', onPointerUp);
+		node.addEventListener('pointercancel', onPointerCancel);
 		node.addEventListener('wheel', onWheel, { passive: false });
 		node.addEventListener('click', onClick, true);
 		node.addEventListener('keydown', onNodeKeydown);
@@ -486,7 +525,7 @@
 			node.removeEventListener('pointerdown', onPointerDown);
 			node.removeEventListener('pointermove', onPointerMove);
 			node.removeEventListener('pointerup', onPointerUp);
-			node.removeEventListener('pointercancel', onPointerUp);
+			node.removeEventListener('pointercancel', onPointerCancel);
 			node.removeEventListener('wheel', onWheel);
 			node.removeEventListener('click', onClick, true);
 			node.removeEventListener('keydown', onNodeKeydown);
@@ -525,7 +564,7 @@
 				class="stage"
 				style:transform={reducedMotion.current
 					? undefined
-					: `rotateX(${tilt.current.x}deg) rotateY(${tilt.current.y}deg)`}
+					: `perspective(900px) rotateX(${tilt.current.x}deg) rotateY(${tilt.current.y}deg)`}
 			>
 				<div class="world" style:transform="translate3d({-camX}px, {-camY}px, 0)">
 					{#each cells as cell (`${cell.x}:${cell.y}`)}
@@ -576,26 +615,20 @@
 		position: absolute;
 		inset: 0;
 		z-index: 1;
-		perspective: 900px;
-		perspective-origin: 50% 48%;
-		transform-style: preserve-3d;
 	}
 
 	.stage {
 		position: absolute;
 		inset: 0;
 		transform-origin: 50% 50%;
-		transform-style: preserve-3d;
 	}
 
 	.field.dragging .stage {
 		will-change: transform;
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.lens {
-			perspective: none;
-		}
+	.field.dragging :global(.tile) {
+		cursor: grabbing;
 	}
 
 	.field.ready {
@@ -679,9 +712,10 @@
 		left: 0;
 		top: 0;
 		will-change: transform;
+		touch-action: none;
 	}
 
-	.cell:focus-within {
+	.cell:has(:global(:focus-visible)) {
 		z-index: 2;
 		outline: 3px solid var(--focus);
 		outline-offset: 4px;

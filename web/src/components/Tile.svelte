@@ -86,6 +86,8 @@
 		border: 1px solid var(--line);
 		overflow: hidden;
 		user-select: none;
+		cursor: pointer;
+		touch-action: none;
 	}
 
 	.shot {
@@ -120,6 +122,7 @@
 		color: var(--fg);
 		text-decoration: none;
 		cursor: pointer;
+		touch-action: none;
 	}
 
 	.meta:focus,
