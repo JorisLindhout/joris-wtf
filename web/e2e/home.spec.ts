@@ -192,6 +192,45 @@ test.describe('homepage', () => {
 		expect(nearAfter).not.toBe(farAfter);
 	});
 
+	test('keeps the mouse grab point aligned with the camera', async ({ page }) => {
+		await page.goto('/');
+		const field = page.locator('.field.ready');
+		await field.waitFor();
+		await page.locator('.field .tile').first().waitFor();
+
+		const start = await page.evaluate(() => {
+			const parse = (transform: string) => {
+				const match = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(transform);
+				return { x: Number(match?.[1] ?? 0), y: Number(match?.[2] ?? 0) };
+			};
+			const tiles = [...document.querySelectorAll('.field .tile')];
+			const tile = tiles.find((el) => {
+				const r = el.getBoundingClientRect();
+				return r.left > 40 && r.top > 40 && r.right < innerWidth - 80 && r.bottom < innerHeight - 80;
+			});
+			const r = (tile ?? document.querySelector('.field')!).getBoundingClientRect();
+			const world = document.querySelector('.world') as HTMLElement;
+			return {
+				x: r.x + 24,
+				y: r.y + 24,
+				cam: parse(world.style.transform),
+			};
+		});
+
+		await page.mouse.move(start.x, start.y);
+		await page.mouse.down();
+		await page.mouse.move(start.x + 80, start.y + 36);
+		const cam = await page.locator('.world').evaluate((el) => {
+			const match = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(
+				(el as HTMLElement).style.transform,
+			);
+			return { x: Number(match?.[1] ?? 0), y: Number(match?.[2] ?? 0) };
+		});
+		expect(cam.x - start.cam.x).toBeCloseTo(80, 0);
+		expect(cam.y - start.cam.y).toBeCloseTo(36, 0);
+		await page.mouse.up();
+	});
+
 	test('keeps the skip link and keyboard path to the field', async ({ page }) => {
 		await page.goto('/');
 		await expect(page.locator('html')).toHaveAttribute('data-field', 'ready');

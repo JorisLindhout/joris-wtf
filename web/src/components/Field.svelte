@@ -41,6 +41,7 @@
 
 	const particles = new Map<string, Particle>();
 	let grabbing = false;
+	let pointerActive = false;
 	let particleId = 0;
 
 	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
@@ -250,7 +251,7 @@
 		const [x, y] = (cell.getAttribute('data-cell') ?? '0,0').split(',').map(Number);
 		focusX = x;
 		focusY = y;
-		if (layout) ensureVisible(x, y, layout);
+		if (layout && !pointerActive) ensureVisible(x, y, layout);
 	}
 
 	function fieldSurface(node: HTMLElement) {
@@ -290,9 +291,15 @@
 			inertiaId = 0;
 		};
 
+		const localPoint = (event: PointerEvent) => {
+			const rect = node.getBoundingClientRect();
+			return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+		};
+
 		const onPointerDown = (event: PointerEvent) => {
 			if (event.button !== 0) return;
 			stopInertia();
+			pointerActive = true;
 			pointerId = event.pointerId;
 			lastX = event.clientX;
 			lastY = event.clientY;
@@ -304,21 +311,27 @@
 			moved = false;
 			startPanX = panX;
 			startPanY = panY;
-			grabX = event.clientX;
-			grabY = event.clientY;
+			const local = localPoint(event);
+			grabX = local.x;
+			grabY = local.y;
 			warpX = 0;
 			warpY = 0;
+			try {
+				node.setPointerCapture(event.pointerId);
+			} catch {
+				// Pointer already released before capture could be set.
+			}
 		};
 
 		const onPointerMove = (event: PointerEvent) => {
 			if (pointerId !== event.pointerId) return;
+			if (event.pointerType === 'mouse' && event.buttons !== 1) return;
 			if (!moved) {
 				if (Math.hypot(event.clientX - originX, event.clientY - originY) <= DRAG) return;
 				moved = true;
 				grabbing = true;
 				dragging = true;
 				kickParticles();
-				node.setPointerCapture(event.pointerId);
 			}
 			const dx = event.clientX - lastX;
 			const dy = event.clientY - lastY;
@@ -327,10 +340,11 @@
 			const sampleVy = (dy / dt) * THROW_SCALE;
 			vx = vx * 0.25 + sampleVx * 0.75;
 			vy = vy * 0.25 + sampleVy * 0.75;
-			panX -= dx;
-			panY -= dy;
-			grabX += (event.clientX - grabX) * 0.55;
-			grabY += (event.clientY - grabY) * 0.55;
+			panX = startPanX - (event.clientX - originX);
+			panY = startPanY - (event.clientY - originY);
+			const local = localPoint(event);
+			grabX += (local.x - grabX) * 0.55;
+			grabY += (local.y - grabY) * 0.55;
 			if (!reducedMotion.current) {
 				warpX = panX - startPanX;
 				warpY = panY - startPanY;
@@ -340,6 +354,7 @@
 			lastX = event.clientX;
 			lastY = event.clientY;
 			lastT = event.timeStamp;
+			event.preventDefault();
 		};
 
 		const startInertia = () => {
@@ -377,6 +392,7 @@
 				node.releasePointerCapture(event.pointerId);
 			}
 			pointerId = null;
+			pointerActive = false;
 			dragging = false;
 			grabbing = false;
 			warpX = 0;
@@ -419,7 +435,7 @@
 		};
 
 		node.addEventListener('pointerdown', onPointerDown);
-		node.addEventListener('pointermove', onPointerMove);
+		node.addEventListener('pointermove', onPointerMove, { passive: false });
 		node.addEventListener('pointerup', onPointerUp);
 		node.addEventListener('pointercancel', onPointerUp);
 		node.addEventListener('wheel', onWheel, { passive: false });
@@ -432,6 +448,7 @@
 		return () => {
 			stopInertia();
 			stopParticles();
+			pointerActive = false;
 			root = undefined;
 			if (skip instanceof HTMLAnchorElement) {
 				skip.removeEventListener('click', onSkipClick);
@@ -503,7 +520,11 @@
 		inset: 0;
 		z-index: 1;
 		overflow: hidden;
+		overflow: clip;
 		overflow-anchor: none;
+		overscroll-behavior: none;
+		user-select: none;
+		-webkit-user-select: none;
 		touch-action: none;
 		cursor: grab;
 		background: transparent;
