@@ -53,6 +53,24 @@ export const project = defineType({
 			description: 'Optional. One sentence, shown on hover/focus.',
 		}),
 		defineField({
+			name: 'fieldPresence',
+			title: 'Field presence',
+			type: 'string',
+			description:
+				'How often this project appears when you pan beyond the first board. The first board and the project list still show every project once.',
+			options: {
+				list: [
+					{ title: 'First board only', value: 'firstBoardOnly' },
+					{ title: 'Rare', value: 'rare' },
+					{ title: 'Normal', value: 'normal' },
+					{ title: 'Often', value: 'often' },
+				],
+				layout: 'dropdown',
+			},
+			initialValue: 'normal',
+			validation: (rule) => rule.required(),
+		}),
+		defineField({
 			name: 'sortOrder',
 			title: 'Sort order',
 			type: 'number',

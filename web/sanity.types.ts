@@ -80,6 +80,7 @@ export type Project = {
   };
   thumbnailAlt?: string;
   description?: string;
+  fieldPresence?: "firstBoardOnly" | "rare" | "normal" | "often";
   sortOrder?: number;
 };
 
@@ -204,7 +205,7 @@ export type AllSanitySchemaTypes =
 
 // Source: ../web/src/lib/content.ts
 // Variable: PROJECTS_QUERY
-// Query: *[_type == "project" && defined(slug.current) && defined(thumbnail)]{  title,  "slug": slug.current,  url,  openInNewTab,  thumbnailAlt,  description,  sortOrder,  thumbnail}
+// Query: *[_type == "project" && defined(slug.current) && defined(thumbnail)]{  title,  "slug": slug.current,  url,  openInNewTab,  thumbnailAlt,  description,  fieldPresence,  sortOrder,  thumbnail}
 export type PROJECTS_QUERY_RESULT = Array<{
   title: string | null;
   slug: string | null;
@@ -212,6 +213,7 @@ export type PROJECTS_QUERY_RESULT = Array<{
   openInNewTab: boolean | null;
   thumbnailAlt: string | null;
   description: string | null;
+  fieldPresence: "firstBoardOnly" | "normal" | "often" | "rare" | null;
   sortOrder: number | null;
   thumbnail: {
     asset?: SanityImageAssetReference;
@@ -259,7 +261,7 @@ export type SITE_SETTINGS_QUERY_RESULT =
 // Query TypeMap
 declare global {
   interface SanityQueries {
-    '*[_type == "project" && defined(slug.current) && defined(thumbnail)]{\n  title,\n  "slug": slug.current,\n  url,\n  openInNewTab,\n  thumbnailAlt,\n  description,\n  sortOrder,\n  thumbnail\n}': PROJECTS_QUERY_RESULT;
+    '*[_type == "project" && defined(slug.current) && defined(thumbnail)]{\n  title,\n  "slug": slug.current,\n  url,\n  openInNewTab,\n  thumbnailAlt,\n  description,\n  fieldPresence,\n  sortOrder,\n  thumbnail\n}': PROJECTS_QUERY_RESULT;
     '*[_id == "siteSettings"][0]{\n  title,\n  description,\n  siteName,\n  ogTitle,\n  ogDescription,\n  ogImage,\n  ogImageAlt,\n  twitterCard,\n  locale\n}': SITE_SETTINGS_QUERY_RESULT;
   }
 }

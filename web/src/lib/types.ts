@@ -1,3 +1,11 @@
+export const FIELD_PRESENCE_VALUES = ['firstBoardOnly', 'rare', 'normal', 'often'] as const;
+export type FieldPresence = (typeof FIELD_PRESENCE_VALUES)[number];
+export const DEFAULT_FIELD_PRESENCE: FieldPresence = 'normal';
+
+export function isFieldPresence(value: unknown): value is FieldPresence {
+	return (FIELD_PRESENCE_VALUES as readonly unknown[]).includes(value);
+}
+
 export type Project = {
 	title: string;
 	slug: string;
@@ -5,6 +13,8 @@ export type Project = {
 	openInNewTab: boolean;
 	thumbnailAlt: string;
 	description?: string;
+	/** Overflow frequency. Missing CMS values map to Normal. */
+	fieldPresence: FieldPresence;
 	/** Reserved for later; unused in v1 UI sort. */
 	sortOrder?: number;
 	src: string;

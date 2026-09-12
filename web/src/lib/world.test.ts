@@ -9,6 +9,9 @@ import {
 	isPrimaryCell,
 	nearSliver,
 	farSliver,
+	FIELD_PRESENCE_WEIGHT,
+	fieldPresenceWeight,
+	presenceWeightsFor,
 	projectIndexForCell,
 	TITLE_BLOCK,
 	visibleCells,
@@ -21,6 +24,7 @@ function project(title: string): Project {
 		url: 'https://example.com',
 		openInNewTab: true,
 		thumbnailAlt: title,
+		fieldPresence: 'normal',
 		src: 'https://cdn.sanity.io/images/elkf1eqd/production/x-640.webp',
 		srcset: 'https://cdn.sanity.io/images/elkf1eqd/production/x-640.webp 640w',
 	};
@@ -129,5 +133,45 @@ describe('world', () => {
 		expect(cellFullyInViewport(-1, 0, cam.x, cam.y, 800, 600, layout)).toBe(false);
 		expect(cellFullyInViewport(0, -1, cam.x, cam.y, 800, 600, layout)).toBe(false);
 		expect(cellFullyInViewport(10, 10, cam.x, cam.y, 800, 600, layout)).toBe(false);
+	});
+
+	it('defaults missing field presence to Normal (weight 3)', () => {
+		expect(fieldPresenceWeight(undefined)).toBe(FIELD_PRESENCE_WEIGHT.normal);
+		expect(fieldPresenceWeight(undefined)).toBe(3);
+		expect(presenceWeightsFor([{ fieldPresence: 'rare' }, {}])).toEqual([1, 3]);
+	});
+
+	it('keeps the unweighted overflow map when every project is Normal', () => {
+		const weights = presenceWeightsFor([project('A'), project('B'), project('C')]);
+		expect(weights).toEqual([3, 3, 3]);
+		for (let x = -6; x < 6; x += 1) {
+			expect(projectIndexForCell(x, -1, 3, 1, 3, weights)).toBe(
+				projectIndexForCell(x, -1, 3, 1, 3),
+			);
+		}
+	});
+
+	it('never picks a first-board-only project in overflow', () => {
+		const weights = [0, 3, 3];
+		expect(projectIndexForCell(0, 0, 3, 1, 3, weights)).toBe(0);
+		for (let y = -12; y < 0; y += 1) {
+			for (let x = -12; x < 12; x += 1) {
+				expect(projectIndexForCell(x, y, 3, 1, 3, weights)).not.toBe(0);
+			}
+		}
+	});
+
+	it('gives rare projects a smaller overflow share than normal', () => {
+		const weights = [1, 3, 3];
+		const hits = [0, 0, 0];
+		for (let y = -40; y < 0; y += 1) {
+			for (let x = -40; x < 40; x += 1) {
+				hits[projectIndexForCell(x, y, 3, 1, 3, weights)] += 1;
+			}
+		}
+		expect(hits[0]).toBeLessThan(hits[1]);
+		expect(hits[0]).toBeLessThan(hits[2]);
+		expect(hits[1] / hits[0]).toBeGreaterThan(2);
+		expect(hits[1] / hits[0]).toBeLessThan(4);
 	});
 });

@@ -2,7 +2,12 @@ import { defineQuery } from 'groq';
 import type { PROJECTS_QUERY_RESULT, SITE_SETTINGS_QUERY_RESULT } from '../../sanity.types';
 import { sortProjects } from './sort';
 import { getSanityClient, shareImageSrc, tileSrc, tileSrcset } from './sanity';
-import type { Project, SiteSeo } from './types';
+import {
+	DEFAULT_FIELD_PRESENCE,
+	isFieldPresence,
+	type Project,
+	type SiteSeo,
+} from './types';
 
 const PROJECTS_QUERY = defineQuery(/* groq */ `*[_type == "project" && defined(slug.current) && defined(thumbnail)]{
   title,
@@ -11,6 +16,7 @@ const PROJECTS_QUERY = defineQuery(/* groq */ `*[_type == "project" && defined(s
   openInNewTab,
   thumbnailAlt,
   description,
+  fieldPresence,
   sortOrder,
   thumbnail
 }`);
@@ -43,6 +49,7 @@ function mapProject(doc: PROJECTS_QUERY_RESULT[number]): Project | null {
 		openInNewTab: doc.openInNewTab ?? true,
 		thumbnailAlt: doc.thumbnailAlt,
 		description: doc.description || undefined,
+		fieldPresence: isFieldPresence(doc.fieldPresence) ? doc.fieldPresence : DEFAULT_FIELD_PRESENCE,
 		sortOrder: doc.sortOrder ?? undefined,
 		src: tileSrc(doc.thumbnail),
 		srcset: tileSrcset(doc.thumbnail),

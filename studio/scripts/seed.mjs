@@ -134,7 +134,7 @@ for (const project of projects) {
 		await client.patch(existing._id).set(doc).commit();
 		console.log('Updated project', project.slug);
 	} else {
-		await client.create(doc);
+		await client.create({ ...doc, fieldPresence: 'normal' });
 		console.log('Created project', project.slug);
 	}
 }

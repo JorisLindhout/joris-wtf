@@ -9,6 +9,7 @@
 		cellFullyInViewport,
 		computeLayout,
 		initialCamera,
+		presenceWeightsFor,
 		projectIndexForCell,
 		TITLE_BLOCK,
 		visibleCells,
@@ -71,6 +72,7 @@
 	const camX = $derived(origin.x + panX);
 	const camY = $derived(origin.y + panY);
 	const cells = $derived(layout ? visibleCells(camX, camY, width, height, layout, 1) : []);
+	const overflowWeights = $derived(presenceWeightsFor(projects));
 
 	function isTabStop(x: number, y: number, current: Layout) {
 		return cellFullyInViewport(x, y, camX, camY, width, height, current);
@@ -193,7 +195,14 @@
 	}
 
 	function projectAt(x: number, y: number, current: Layout): Project {
-		const index = projectIndexForCell(x, y, current.cols, current.rows, projects.length);
+		const index = projectIndexForCell(
+			x,
+			y,
+			current.cols,
+			current.rows,
+			projects.length,
+			overflowWeights,
+		);
 		return projects[index] ?? projects[0];
 	}
 

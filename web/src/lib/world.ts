@@ -1,3 +1,5 @@
+import { DEFAULT_FIELD_PRESENCE, isFieldPresence, type FieldPresence } from './types';
+
 export type Layout = {
 	cols: number;
 	rows: number;
@@ -7,6 +9,14 @@ export type Layout = {
 	cellW: number;
 	cellH: number;
 };
+
+/** Overflow bag sizes. Normal is the default; equal weights keep today's mapping. */
+export const FIELD_PRESENCE_WEIGHT = {
+	firstBoardOnly: 0,
+	rare: 1,
+	normal: 3,
+	often: 6,
+} as const satisfies Record<FieldPresence, number>;
 
 export type Cell = { x: number; y: number };
 
@@ -119,16 +129,44 @@ export function isPrimaryCell(
 	return y * cols + x < count;
 }
 
+export function fieldPresenceWeight(value: FieldPresence | null | undefined): number {
+	return FIELD_PRESENCE_WEIGHT[isFieldPresence(value) ? value : DEFAULT_FIELD_PRESENCE];
+}
+
+export function presenceWeightsFor(
+	projects: readonly { fieldPresence?: FieldPresence | null }[],
+): number[] {
+	return projects.map((project) => fieldPresenceWeight(project.fieldPresence));
+}
+
 export function projectIndexForCell(
 	x: number,
 	y: number,
 	cols: number,
 	rows: number,
 	count: number,
+	weights?: readonly number[],
 ): number {
 	if (count <= 0) return 0;
 	if (isPrimaryCell(x, y, cols, rows, count)) return y * cols + x;
-	return cellSeed(x, y) % count;
+	return overflowIndex(cellSeed(x, y), count, weights);
+}
+
+function overflowIndex(seed: number, count: number, weights?: readonly number[]): number {
+	if (!weights || weights.length !== count) return seed % count;
+
+	const total = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
+	if (total <= 0) return seed % count;
+
+	const first = Math.max(0, weights[0] ?? 0);
+	if (weights.every((weight) => Math.max(0, weight) === first)) return seed % count;
+
+	let rest = seed % total;
+	for (let i = 0; i < count; i += 1) {
+		rest -= Math.max(0, weights[i] ?? 0);
+		if (rest < 0) return i;
+	}
+	return count - 1;
 }
 
 /** True when the whole tile is on-screen, so it is a sensible Tab stop. */
