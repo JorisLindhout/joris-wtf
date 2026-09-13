@@ -40,3 +40,7 @@ From the repo root (after installing in `web/` / `studio/`):
 All fetching goes through `web/src/lib/content.ts`. Missing `siteSettings` or an empty published project list fails `astro build`. In `astro dev`, the homepage shows a content-unavailable message instead.
 
 Studio is `npm run studio`. Types: `npm run typegen` (writes `web/sanity.types.ts`). `npm run seed` upserts documents and keeps existing images; it needs `SANITY_API_WRITE_TOKEN` in `studio/.env` (gitignored). New projects need a thumbnail in Studio first.
+
+Publishing in Studio rebuilds production. A Sanity webhook (`cloudflare-rebuild`) POSTs to a Cloudflare Workers Builds Deploy Hook (`sanity-content` on `main`). That rebuilds the current `main` SHA with a fresh Sanity fetch — no git commit. Code still deploys on push to `main`. Local `npm run deploy` is a manual override.
+
+The Deploy Hook URL is the credential. Keep it in Sanity’s webhook settings only; never commit it. Draft edits should not trigger a rebuild.
