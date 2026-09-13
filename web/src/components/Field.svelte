@@ -59,12 +59,13 @@
 
 	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
 	const coarsePointer = new MediaQuery('(pointer: coarse)');
-	const TILT_MAX = 12;
+	const TILT_MAX = 7;
 	const TILT_GAIN = 0.04;
+	const WARP_SOFT = 280;
 	const tilt = new Spring({ x: 0, y: 0 }, { stiffness: 0.16, damping: 0.58, precision: 0.02 });
 
-	function clamp(n: number, min: number, max: number) {
-		return Math.max(min, Math.min(max, n));
+	function soften(n: number, limit: number) {
+		return limit * Math.tanh(n / limit);
 	}
 
 	function tileFromTarget(target: EventTarget | null) {
@@ -74,8 +75,8 @@
 
 	function tiltFromDrag(wx: number, wy: number) {
 		return {
-			x: clamp(-wy * TILT_GAIN, -TILT_MAX, TILT_MAX),
-			y: clamp(-wx * TILT_GAIN, -TILT_MAX, TILT_MAX),
+			x: soften(-wy * TILT_GAIN, TILT_MAX),
+			y: soften(-wx * TILT_GAIN, TILT_MAX),
 		};
 	}
 
@@ -199,6 +200,8 @@
 			}
 		}
 
+		const wx = soften(warpX, WARP_SOFT);
+		const wy = soften(warpY, WARP_SOFT);
 		let alive = grabbing;
 		for (const [key, p] of particles) {
 			const cx = p.cx * layout.cellW + layout.tileW * 0.5;
@@ -206,9 +209,9 @@
 			const dist = Math.hypot(cx - grabWX, cy - grabWY);
 			const proximity = Math.exp(-dist / radius);
 			const jitter = 0.55 + grain(p.cx, p.cy) * 0.85;
-			const follow = 0.55 + proximity * 0.62;
-			const tx = grabbing ? -warpX * (follow - 1) : 0;
-			const ty = grabbing ? -warpY * (follow - 1) : 0;
+			const follow = 0.72 + proximity * 0.42;
+			const tx = grabbing ? -wx * (follow - 1) : 0;
+			const ty = grabbing ? -wy * (follow - 1) : 0;
 			const stiff = (0.032 + proximity * 0.13) * jitter;
 			const damp = 0.82 + proximity * 0.08;
 			p.vx += (tx - p.x) * stiff;
@@ -641,7 +644,7 @@
 				class="stage"
 				style:transform={reducedMotion.current
 					? undefined
-					: `perspective(900px) rotateX(${tilt.current.x}deg) rotateY(${tilt.current.y}deg)`}
+					: `perspective(1400px) rotateX(${tilt.current.x}deg) rotateY(${tilt.current.y}deg)`}
 			>
 				<div class="world" style:transform="translate3d({-camX}px, {-camY}px, 0)">
 					{#each cells as cell (`${cell.x}:${cell.y}`)}
