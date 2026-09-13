@@ -53,6 +53,11 @@ describe('jsonLdGraph', () => {
 				name: 'joris.wtf',
 				description: 'An infinite field of projects.',
 				inLanguage: 'en',
+				author: {
+					'@type': 'Person',
+					name: 'joris.wtf',
+					url: 'https://joris.wtf/',
+				},
 			},
 		]);
 	});

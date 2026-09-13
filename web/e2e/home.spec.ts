@@ -43,6 +43,19 @@ test.describe('homepage', () => {
 			'content',
 			siteName!,
 		);
+		await expect(page.locator('meta[name="author"]')).toHaveAttribute('content', /.+/);
+		await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute(
+			'content',
+			'yes',
+		);
+		await expect(page.locator('meta[name="apple-mobile-web-app-status-bar-style"]')).toHaveAttribute(
+			'content',
+			'black-translucent',
+		);
+		await expect(page.locator('meta[name="mobile-web-app-capable"]')).toHaveAttribute(
+			'content',
+			'yes',
+		);
 		await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/site.webmanifest');
 
 		const description = await page.locator('meta[name="description"]').getAttribute('content');
@@ -68,6 +81,10 @@ test.describe('homepage', () => {
 		expect(graph['@graph'][0]).toMatchObject({
 			'@type': 'WebSite',
 			url: 'https://joris.wtf/',
+			author: {
+				'@type': 'Person',
+				url: 'https://joris.wtf/',
+			},
 		});
 		expect(graph['@graph'][1]).toMatchObject({
 			'@type': 'ItemList',

@@ -68,6 +68,11 @@ export function jsonLdGraph(site: URL, seo: SiteSeo, projects?: readonly Project
 			name: seo.siteName,
 			description: seo.description,
 			inLanguage: seo.locale,
+			author: {
+				'@type': 'Person',
+				name: seo.title,
+				url: origin,
+			},
 		},
 	];
 

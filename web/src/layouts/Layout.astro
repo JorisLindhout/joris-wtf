@@ -98,6 +98,7 @@ const gtagBoot = googleAnalyticsId
 		<link rel="dns-prefetch" href="https://cdn.sanity.io" />
 		<meta name="color-scheme" content="dark" />
 		<meta name="theme-color" content={SITE_THEME_COLOR} />
+		<meta name="author" content={seo.title} />
 		<meta name="description" content={documentDescription} />
 		<meta name="generator" content={Astro.generator} />
 		<link rel="canonical" href={canonical} />
@@ -105,7 +106,10 @@ const gtagBoot = googleAnalyticsId
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="shortcut icon" href="/favicon.ico" />
 		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-title" content={seo.siteName} />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="mobile-web-app-capable" content="yes" />
 		<link rel="manifest" href="/site.webmanifest" />
 		<meta property="og:site_name" content={seo.siteName} />
 		<meta property="og:title" content={socialTitle} />
