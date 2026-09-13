@@ -382,6 +382,7 @@
 		let startPanX = 0;
 		let startPanY = 0;
 		let pressTile: Element | null = null;
+		let clickTile: Element | null = null;
 		let suppressClickUntil = 0;
 
 		const THROW_SCALE = 19;
@@ -426,8 +427,11 @@
 			grabY = local.y;
 			warpX = 0;
 			warpY = 0;
+		};
+
+		const capturePointer = (id: number) => {
 			try {
-				node.setPointerCapture(event.pointerId);
+				node.setPointerCapture(id);
 			} catch {
 				// Pointer already released before capture could be set.
 			}
@@ -442,6 +446,7 @@
 				moved = true;
 				grabbing = true;
 				dragging = true;
+				capturePointer(event.pointerId);
 				kickParticles();
 			}
 			const dx = event.clientX - lastX;
@@ -506,11 +511,7 @@
 			if (node.hasPointerCapture(event.pointerId)) {
 				node.releasePointerCapture(event.pointerId);
 			}
-			const endTile = tileFromTarget(event.target);
-			const tappedTile =
-				!cancelled && !moved && pressTile != null && endTile === pressTile
-					? pressTile
-					: null;
+			const tappedTile = !cancelled && !moved && pressTile != null ? pressTile : null;
 			pointerId = null;
 			dragging = false;
 			grabbing = false;
@@ -525,6 +526,7 @@
 				startInertia();
 				scheduleUrlSettle();
 			}
+			clickTile = tappedTile;
 			if (tappedTile) ignoreFocusPan = true;
 			pointerActive = false;
 			pressTile = null;
@@ -548,12 +550,13 @@
 		};
 
 		const onClick = (event: MouseEvent) => {
+			const tile = tileFromTarget(event.target) ?? clickTile;
+			clickTile = null;
 			if (moved || performance.now() < suppressClickUntil) {
 				event.preventDefault();
 				event.stopPropagation();
 				return;
 			}
-			const tile = tileFromTarget(event.target);
 			if (!tile) return;
 			if (event.target instanceof Element && event.target.closest('a.meta')) return;
 			const link = tile.querySelector('a.meta');

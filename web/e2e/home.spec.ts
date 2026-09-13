@@ -296,6 +296,57 @@ test.describe('homepage', () => {
 		await page.mouse.up();
 	});
 
+	test('opens a project from the tile link on click', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.locator('html')).toHaveAttribute('data-field', 'ready');
+		const link = page.locator('.field .tile a.meta[target="_blank"][tabindex="0"]').first();
+		await link.waitFor();
+
+		const popupPromise = page.waitForEvent('popup');
+		await link.click();
+		const popup = await popupPromise;
+		expect(popup.url()).toMatch(/^https?:/);
+		await popup.close();
+	});
+
+	test('opens a project from a click on the tile image', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.locator('html')).toHaveAttribute('data-field', 'ready');
+		const tile = page.locator('.field .tile:has(a.meta[target="_blank"][tabindex="0"])').first();
+		await tile.waitFor();
+
+		const popupPromise = page.waitForEvent('popup');
+		await tile.locator('.shot').click();
+		const popup = await popupPromise;
+		expect(popup.url()).toMatch(/^https?:/);
+		await popup.close();
+	});
+
+	test('does not open a project after a pan drag', async ({ page }) => {
+		await page.goto('/');
+		const field = page.locator('.field.ready');
+		await field.waitFor();
+		await page.locator('.field .tile').first().waitFor();
+		const pagesBefore = page.context().pages().length;
+
+		const start = await page.evaluate(() => {
+			const tiles = [...document.querySelectorAll('.field .tile')];
+			const tile = tiles.find((el) => {
+				const r = el.getBoundingClientRect();
+				return r.left > 40 && r.top > 40 && r.right < innerWidth - 80 && r.bottom < innerHeight - 80;
+			});
+			const r = (tile ?? document.querySelector('.field')!).getBoundingClientRect();
+			return { x: r.x + 24, y: r.y + 24 };
+		});
+
+		await page.mouse.move(start.x, start.y);
+		await page.mouse.down();
+		await page.mouse.move(start.x + 80, start.y + 36);
+		await page.mouse.up();
+		await expect(field).not.toHaveClass(/dragging/);
+		expect(page.context().pages().length).toBe(pagesBefore);
+	});
+
 	test('keeps the skip link and keyboard path to the field', async ({ page }) => {
 		await page.goto('/');
 		await expect(page.locator('html')).toHaveAttribute('data-field', 'ready');
