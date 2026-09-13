@@ -1,24 +1,29 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
 	import { Spring } from 'svelte/motion';
 	import { MediaQuery } from 'svelte/reactivity';
 	import Tile from './Tile.svelte';
 	import type { Project } from '../lib/types';
 	import {
+		cameraForCenteredCell,
 		cellFullyInViewport,
+		clearlyCenteredCell,
 		computeLayout,
 		initialCamera,
 		presenceWeightsFor,
+		primaryCellForIndex,
 		projectIndexForCell,
 		TITLE_BLOCK,
 		visibleCells,
+		type Cell,
 		type Layout,
 	} from '../lib/world';
+	import { replaceProjectPath } from '../lib/urls';
 
-	let { projects }: { projects: Project[] } = $props();
+	let { projects, focusSlug }: { projects: Project[]; focusSlug?: string } = $props();
 
-	let root: HTMLElement | undefined = $state();
+	let root: HTMLElement | undefined;
 	let width = $state(0);
 	let height = $state(0);
 	let panX = $state(0);
@@ -46,6 +51,11 @@
 	let pointerActive = false;
 	let ignoreFocusPan = false;
 	let particleId = 0;
+	let didLand = false;
+	let lastUrlCell: Cell | null = null;
+	let settleTimer = 0;
+	let throwing = false;
+	const SETTLE_MS = 300;
 
 	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
 	const coarsePointer = new MediaQuery('(pointer: coarse)');
@@ -92,7 +102,38 @@
 		};
 		apply();
 		window.addEventListener('resize', apply);
-		return () => window.removeEventListener('resize', apply);
+
+		let landFrame = 0;
+		const tryLand = () => {
+			if (didLand || !focusSlug) return;
+			if (!layout || width <= 0 || height <= 0) {
+				landFrame = requestAnimationFrame(tryLand);
+				return;
+			}
+			const index = projects.findIndex((project) => project.slug === focusSlug);
+			if (index < 0) return;
+			const cell = primaryCellForIndex(index, layout.cols);
+			const cam = cameraForCenteredCell(cell.x, cell.y, layout, width, height);
+			didLand = true;
+			lastUrlCell = cell;
+			focusX = cell.x;
+			focusY = cell.y;
+			panX = cam.x - origin.x;
+			panY = cam.y - origin.y;
+			const slug = focusSlug;
+			void tick().then(() => {
+				const el = root?.querySelector<HTMLElement>(
+					`[data-slug="${CSS.escape(slug)}"][data-cell="${cell.x},${cell.y}"] a`,
+				);
+				el?.focus({ preventScroll: true, focusVisible: true });
+			});
+		};
+		landFrame = requestAnimationFrame(tryLand);
+
+		return () => {
+			window.removeEventListener('resize', apply);
+			if (landFrame) cancelAnimationFrame(landFrame);
+		};
 	});
 
 	$effect(() => {
@@ -213,6 +254,28 @@
 		return projects[index] ?? projects[0];
 	}
 
+	function syncUrlFromCell(x: number, y: number, current: Layout) {
+		const project = projectAt(x, y, current);
+		if (!project) return;
+		lastUrlCell = { x, y };
+		replaceProjectPath(project.slug);
+	}
+
+	function scheduleUrlSettle() {
+		if (settleTimer) clearTimeout(settleTimer);
+		settleTimer = window.setTimeout(() => {
+			settleTimer = 0;
+			if (pointerActive || throwing) {
+				scheduleUrlSettle();
+				return;
+			}
+			if (!layout) return;
+			const cell = clearlyCenteredCell(camX, camY, width, height, layout, lastUrlCell);
+			if (!cell) return;
+			syncUrlFromCell(cell.x, cell.y, layout);
+		}, SETTLE_MS);
+	}
+
 	function setCamera(x: number, y: number) {
 		panX = x - origin.x;
 		panY = y - origin.y;
@@ -240,6 +303,7 @@
 		await tick();
 		const el = root?.querySelector<HTMLElement>(`[data-cell="${focusX},${focusY}"] a`);
 		el?.focus({ preventScroll: true });
+		syncUrlFromCell(focusX, focusY, layout);
 	}
 
 	function onKeydown(event: KeyboardEvent) {
@@ -283,9 +347,14 @@
 		focusX = x;
 		focusY = y;
 		if (layout && !pointerActive && !ignoreFocusPan) ensureVisible(x, y, layout);
+		if (layout && !pointerActive) syncUrlFromCell(x, y, layout);
 	}
 
 	function fieldSurface(node: HTMLElement) {
+		return untrack(() => attachField(node));
+	}
+
+	function attachField(node: HTMLElement) {
 		root = node;
 
 		const skip = document.querySelector('.skip-link');
@@ -324,6 +393,7 @@
 		const stopInertia = () => {
 			if (inertiaId) cancelAnimationFrame(inertiaId);
 			inertiaId = 0;
+			throwing = false;
 		};
 
 		const localPoint = (event: PointerEvent) => {
@@ -420,8 +490,11 @@
 					inertiaId = requestAnimationFrame(step);
 				} else {
 					inertiaId = 0;
+					throwing = false;
+					scheduleUrlSettle();
 				}
 			};
+			throwing = true;
 			inertiaId = requestAnimationFrame(step);
 		};
 
@@ -447,6 +520,7 @@
 			if (moved) {
 				suppressClickUntil = performance.now() + CLICK_SUPPRESS_MS;
 				startInertia();
+				scheduleUrlSettle();
 			}
 			if (tappedTile) ignoreFocusPan = true;
 			pointerActive = false;
@@ -467,6 +541,7 @@
 			clearParticles();
 			panX += event.deltaX;
 			panY += event.deltaY;
+			scheduleUrlSettle();
 		};
 
 		const onClick = (event: MouseEvent) => {
@@ -516,6 +591,8 @@
 		return () => {
 			stopInertia();
 			stopParticles();
+			if (settleTimer) clearTimeout(settleTimer);
+			settleTimer = 0;
 			pointerActive = false;
 			void tilt.set({ x: 0, y: 0 }, { instant: true });
 			root = undefined;
@@ -582,7 +659,9 @@
 								height={layout.tileH}
 								tabIndex={layout && (isTabStop(cell.x, cell.y, layout) || (cell.x === focusX && cell.y === focusY)) ? 0 : -1}
 								loading="eager"
-								fetchpriority={cell.x === 0 && cell.y === 0 ? 'high' : 'auto'}
+								fetchpriority={(focusSlug ? cell.x === focusX && cell.y === focusY : cell.x === 0 && cell.y === 0)
+									? 'high'
+									: 'auto'}
 							/>
 						</div>
 					{/each}

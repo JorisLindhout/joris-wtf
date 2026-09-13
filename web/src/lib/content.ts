@@ -53,6 +53,7 @@ function mapProject(doc: PROJECTS_QUERY_RESULT[number]): Project | null {
 		sortOrder: doc.sortOrder ?? undefined,
 		src: tileSrc(doc.thumbnail),
 		srcset: tileSrcset(doc.thumbnail),
+		ogImage: shareImageSrc(doc.thumbnail),
 	};
 }
 

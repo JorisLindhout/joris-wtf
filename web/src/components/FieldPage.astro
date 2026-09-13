@@ -1,0 +1,117 @@
+---
+import { Image } from 'astro:assets';
+import Field from './Field.svelte';
+import Layout from '../layouts/Layout.astro';
+import { sizesFor, srcFor, srcsetFor } from '../lib/images';
+import { projectDocumentTitle } from '../lib/seo';
+import { projectPath } from '../lib/slugs';
+import type { Project, SiteSeo } from '../lib/types';
+
+type Props = {
+	seo: SiteSeo;
+	projects: Project[];
+	focus?: Project;
+};
+
+const { seo, projects, focus } = Astro.props;
+const lcp = focus ?? projects[0];
+const pageTitle = focus ? projectDocumentTitle(focus, seo) : undefined;
+const pageDescription = focus ? (focus.description ?? seo.description) : undefined;
+---
+
+<Layout
+	seo={seo}
+	projects={projects}
+	project={focus}
+	title={pageTitle}
+	description={pageDescription}
+	ogImage={focus?.ogImage}
+	ogImageAlt={focus?.thumbnailAlt}
+>
+	<Fragment slot="head">
+		{
+			lcp ? (
+				<link
+					rel="preload"
+					as="image"
+					type="image/webp"
+					href={srcFor(lcp)}
+					imagesrcset={srcsetFor(lcp)}
+					imagesizes="(max-width: 727px) 160px, 280px"
+					fetchpriority="high"
+				/>
+			) : null
+		}
+	</Fragment>
+	<a
+		class="skip-link"
+		href="#projects"
+		data-field-href="#field"
+		data-field-label="Skip to projects"
+	>
+		Skip to project list
+	</a>
+
+	<main>
+		<h1 class="page-title">{focus ? focus.title : seo.title}</h1>
+		<nav id="projects" aria-label="Projects">
+			<ul class="project-list">
+				{
+					projects.map((project) => {
+						const current = focus?.slug === project.slug;
+						return (
+							<li id={project.slug} aria-current={current ? 'page' : undefined}>
+								<a href={projectPath(project.slug)}>
+									<span class="shot">
+										<Image
+											src={srcFor(project)}
+											srcset={srcsetFor(project)}
+											sizes={sizesFor(220)}
+											width={220}
+											height={165}
+											alt={project.thumbnailAlt}
+											layout="none"
+											loading="lazy"
+											decoding="async"
+											fetchpriority="low"
+										/>
+									</span>
+									<span class="title">{project.title}</span>
+									{project.description ? <span class="desc">{project.description}</span> : null}
+								</a>
+								{current ? (
+									<a
+										class="open-project"
+										href={project.url}
+										target={project.openInNewTab ? '_blank' : undefined}
+										rel={project.openInNewTab ? 'noopener noreferrer' : undefined}
+									>
+										Open {project.title}
+									</a>
+								) : null}
+							</li>
+						);
+					})
+				}
+			</ul>
+		</nav>
+		<script is:inline>
+			(() => {
+				const nav = document.getElementById('projects');
+				if (nav instanceof HTMLElement) {
+					nav.setAttribute('aria-hidden', 'true');
+					nav.inert = true;
+				}
+				const skip = document.querySelector('.skip-link');
+				if (skip instanceof HTMLAnchorElement) {
+					if (skip.dataset.fieldHref) skip.href = skip.dataset.fieldHref;
+					if (skip.dataset.fieldLabel) skip.textContent = skip.dataset.fieldLabel;
+				}
+			})();
+		</script>
+
+		<div class="field-host">
+			<Field client:load projects={projects} focusSlug={focus?.slug} />
+		</div>
+	</main>
+</Layout>

@@ -1,9 +1,6 @@
 ---
-import { Image } from 'astro:assets';
-import Field from '../components/Field.svelte';
-import Layout from '../layouts/Layout.astro';
+import FieldPage from '../components/FieldPage.astro';
 import { getProjects, getSiteSeo } from '../lib/content';
-import { sizesFor, srcFor, srcsetFor } from '../lib/images';
 import { SITE_THEME_COLOR } from '../lib/seo';
 import '../styles/global.css';
 import type { Project, SiteSeo } from '../lib/types';
@@ -21,91 +18,11 @@ try {
 	if (import.meta.env.PROD) throw error;
 	content = { ok: false, error: message };
 }
-
-const lcp = content.ok ? content.projects[0] : undefined;
 ---
 
 {
 	content.ok ? (
-		<Layout seo={content.seo} projects={content.projects}>
-			<Fragment slot="head">
-				{
-					lcp ? (
-						<link
-							rel="preload"
-							as="image"
-							type="image/webp"
-							href={srcFor(lcp)}
-							imagesrcset={srcsetFor(lcp)}
-							imagesizes="(max-width: 727px) 160px, 280px"
-							fetchpriority="high"
-						/>
-					) : null
-				}
-			</Fragment>
-			<a
-				class="skip-link"
-				href="#projects"
-				data-field-href="#field"
-				data-field-label="Skip to projects"
-			>
-				Skip to project list
-			</a>
-
-			<main>
-				<h1 class="page-title">{content.seo.title}</h1>
-				<nav id="projects" aria-label="Projects">
-					<ul class="project-list">
-						{
-							content.projects.map((project) => (
-								<li>
-									<a
-										href={project.url}
-										target={project.openInNewTab ? '_blank' : undefined}
-										rel={project.openInNewTab ? 'noopener noreferrer' : undefined}
-									>
-										<span class="shot">
-											<Image
-												src={srcFor(project)}
-												srcset={srcsetFor(project)}
-												sizes={sizesFor(220)}
-												width={220}
-												height={165}
-												alt={project.thumbnailAlt}
-												layout="none"
-												loading="lazy"
-												decoding="async"
-												fetchpriority="low"
-											/>
-										</span>
-										<span class="title">{project.title}</span>
-										{project.description ? <span class="desc">{project.description}</span> : null}
-									</a>
-								</li>
-							))
-						}
-					</ul>
-				</nav>
-				<script is:inline>
-					(() => {
-						const nav = document.getElementById('projects');
-						if (nav instanceof HTMLElement) {
-							nav.setAttribute('aria-hidden', 'true');
-							nav.inert = true;
-						}
-						const skip = document.querySelector('.skip-link');
-						if (skip instanceof HTMLAnchorElement) {
-							if (skip.dataset.fieldHref) skip.href = skip.dataset.fieldHref;
-							if (skip.dataset.fieldLabel) skip.textContent = skip.dataset.fieldLabel;
-						}
-					})();
-				</script>
-
-				<div class="field-host">
-					<Field client:load projects={content.projects} />
-				</div>
-			</main>
-		</Layout>
+		<FieldPage seo={content.seo} projects={content.projects} />
 	) : (
 		<html lang="en">
 			<head>

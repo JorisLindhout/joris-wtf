@@ -29,7 +29,7 @@ From the repo root (after installing in `web/` / `studio/`):
 | `npm run build` | Production build (`web/dist`) |
 | `npm run preview` | Preview the production build |
 | `npm run check` | Astro + Svelte typecheck |
-| `npm run test:unit` | World/sort unit tests |
+| `npm run test:unit` | Unit tests (world, SEO, slugs) |
 | `npm test` | Playwright + axe |
 | `npm run deploy` | Build and deploy with Wrangler |
 
@@ -44,3 +44,11 @@ Studio is `npm run studio`. Types: `npm run typegen` (writes `web/sanity.types.t
 Publishing in Studio rebuilds production. A Sanity webhook (`cloudflare-rebuild`) POSTs to a Cloudflare Workers Builds Deploy Hook (`sanity-content` on `main`). That rebuilds the current `main` SHA with a fresh Sanity fetch — no git commit. Code still deploys on push to `main`. Local `npm run deploy` is a manual override.
 
 The Deploy Hook URL is the credential. Keep it in Sanity’s webhook settings only; never commit it. Draft edits should not trigger a rebuild.
+
+## URLs
+
+`/` is the field. Each published project is also `https://joris.wtf/{slug}` — same field, that project’s first-board tile centered and focused. The HTML list links to those paths; field tiles still go to the project’s destination URL.
+
+After a pan settles, or when a tile is focused (Tab / arrows), the address bar `replaceState`s to `/{slug}`. No extra history entry, and the document title stays put until a real load. Refresh always recenters the primary cell. `/` is left alone until the user actually moves.
+
+`/sitemap-0.xml` lists `/` and every project page. `/llms.txt` is the same list for agents (`robots.txt` points at it). Unknown paths 404 with `noindex`. Extra public URLs go in `web/src/lib/seo.ts` (`sitemapXml` / `llmsTxt`). Project slugs cannot shadow those files — the denylist lives in `web/src/lib/slugs.ts` and Studio.

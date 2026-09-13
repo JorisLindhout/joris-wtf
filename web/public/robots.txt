@@ -2,3 +2,6 @@ User-agent: *
 Allow: /
 
 Sitemap: https://joris.wtf/sitemap-index.xml
+
+# https://llmstxt.org
+# https://joris.wtf/llms.txt

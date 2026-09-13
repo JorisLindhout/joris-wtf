@@ -19,6 +19,8 @@ export type Project = {
 	sortOrder?: number;
 	src: string;
 	srcset: string;
+	/** 1200×630 crop of the thumbnail for project-page share cards. */
+	ogImage: string;
 };
 
 /** Apex site SEO. Maps to the Sanity `siteSettings` SEO fieldset. */

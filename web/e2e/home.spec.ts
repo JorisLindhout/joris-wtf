@@ -11,6 +11,10 @@ test.describe('homepage', () => {
 			'href',
 			'https://joris.wtf/',
 		);
+		await expect(page.locator('link[rel="sitemap"]')).toHaveAttribute(
+			'href',
+			'/sitemap-index.xml',
+		);
 		await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
 			'content',
 			/cdn\.sanity\.io/,
@@ -89,6 +93,12 @@ test.describe('homepage', () => {
 		expect(graph['@graph'][1]).toMatchObject({
 			'@type': 'ItemList',
 		});
+		const listItems = (graph['@graph'][1] as { itemListElement?: Array<{ url?: string }> })
+			.itemListElement;
+		expect(listItems?.length).toBeGreaterThan(0);
+		for (const item of listItems ?? []) {
+			expect(item.url).toMatch(/^https:\/\/joris\.wtf\/[a-z0-9-]+$/);
+		}
 
 		await expect(page.locator('html')).toHaveAttribute('data-enhanced', '');
 		await expect(page.locator('#projects')).toHaveAttribute('aria-hidden', 'true');
@@ -137,18 +147,24 @@ test.describe('homepage', () => {
 		expect(fontFamily).toMatch(/Atkinson Hyperlegible Next/);
 		expect(fontFamily).not.toMatch(/Atkinson Hyperlegible Next-/);
 
-		const list = page.locator('#projects a');
+		const list = page.locator('#projects .project-list > li > a');
 		const count = await list.count();
 		expect(count).toBeGreaterThan(0);
 		expect(graph['@graph'][1]).toMatchObject({
 			numberOfItems: count,
 		});
 
-		const blankLinks = page.locator('#projects a[target="_blank"]');
-		const blankCount = await blankLinks.count();
-		expect(blankCount).toBeGreaterThan(0);
-		for (let i = 0; i < blankCount; i += 1) {
-			await expect(blankLinks.nth(i)).toHaveAttribute('rel', /noopener/);
+		for (let i = 0; i < count; i += 1) {
+			await expect(list.nth(i)).toHaveAttribute('href', /^\//);
+			await expect(list.nth(i)).not.toHaveAttribute('href', /^https?:/);
+		}
+
+		const tileLinks = page.locator('.field .tile a[target="_blank"]');
+		const tileCount = await tileLinks.count();
+		expect(tileCount).toBeGreaterThan(0);
+		for (let i = 0; i < Math.min(tileCount, 8); i += 1) {
+			await expect(tileLinks.nth(i)).toHaveAttribute('rel', /noopener/);
+			await expect(tileLinks.nth(i)).toHaveAttribute('href', /^https?:/);
 		}
 
 		const images = page.locator('#projects img');
@@ -187,7 +203,7 @@ test.describe('homepage', () => {
 		const field = page.locator('.field.ready');
 		await expect(field).toBeVisible();
 		await expect(page.locator('.field .tile').first()).toBeVisible();
-		const listCount = await page.locator('#projects a').count();
+		const listCount = await page.locator('#projects .project-list > li').count();
 		const tileCount = await page.locator('.field .tile').count();
 		expect(tileCount).toBeGreaterThan(listCount / 2);
 
@@ -292,7 +308,6 @@ test.describe('homepage', () => {
 		await page.keyboard.press('Tab');
 		await expect(skip).toBeFocused();
 		await page.keyboard.press('Enter');
-		await expect(page).toHaveURL(/#field/);
 		const focusedTile = page.locator('.field .tile:has(a:focus)');
 		await expect(focusedTile).toBeVisible();
 		const box = await focusedTile.boundingBox();
@@ -380,5 +395,9 @@ test.describe('homepage without JavaScript', () => {
 		await expect(page.locator('#projects')).not.toHaveAttribute('aria-hidden');
 		await expect(page.locator('.field.ready')).toHaveCount(0);
 		await expect(page.locator('.field .tile')).toHaveCount(0);
+		await expect(page.locator('#projects .project-list > li > a').first()).toHaveAttribute(
+			'href',
+			/^\//,
+		);
 	});
 });

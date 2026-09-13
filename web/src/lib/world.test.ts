@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { sortableTitle, sortProjects } from './sort';
 import type { Project } from './types';
 import {
+	cameraForCenteredCell,
 	cellFullyInViewport,
 	cellSeed,
+	clearlyCenteredCell,
 	computeLayout,
 	initialCamera,
 	isPrimaryCell,
@@ -12,6 +14,7 @@ import {
 	FIELD_PRESENCE_WEIGHT,
 	fieldPresenceWeight,
 	presenceWeightsFor,
+	primaryCellForIndex,
 	projectIndexForCell,
 	TITLE_BLOCK,
 	visibleCells,
@@ -27,6 +30,7 @@ function project(title: string): Project {
 		fieldPresence: 'normal',
 		src: 'https://cdn.sanity.io/images/elkf1eqd/production/x-640.webp',
 		srcset: 'https://cdn.sanity.io/images/elkf1eqd/production/x-640.webp 640w',
+		ogImage: 'https://cdn.sanity.io/images/elkf1eqd/production/x-1200.jpg',
 	};
 }
 
@@ -173,5 +177,39 @@ describe('world', () => {
 		expect(hits[0]).toBeLessThan(hits[2]);
 		expect(hits[1] / hits[0]).toBeGreaterThan(2);
 		expect(hits[1] / hits[0]).toBeLessThan(4);
+	});
+
+	it('maps a project index onto the primary board', () => {
+		expect(primaryCellForIndex(0, 3)).toEqual({ x: 0, y: 0 });
+		expect(primaryCellForIndex(5, 3)).toEqual({ x: 2, y: 1 });
+	});
+
+	it('centers a cell on the viewport', () => {
+		const layout = computeLayout(800, 8);
+		const cam = cameraForCenteredCell(1, 0, layout, 800, 600);
+		expect(cam.x + 400).toBeCloseTo(1 * layout.cellW + layout.tileW / 2, 5);
+		expect(cam.y + 300).toBeCloseTo(layout.tileH / 2, 5);
+	});
+
+	it('keeps the previous cell when the viewport center is in a gap or hysteresis band', () => {
+		const layout = computeLayout(800, 8);
+		const cam = cameraForCenteredCell(1, 0, layout, 800, 600);
+		expect(clearlyCenteredCell(cam.x, cam.y, 800, 600, layout)).toEqual({ x: 1, y: 0 });
+
+		const previous = { x: 1, y: 0 };
+		const towardNeighbor = {
+			x: cam.x + layout.cellW * 0.2,
+			y: cam.y,
+		};
+		expect(clearlyCenteredCell(towardNeighbor.x, towardNeighbor.y, 800, 600, layout, previous)).toEqual(
+			previous,
+		);
+
+		const gapCam = {
+			x: 1 * layout.cellW + layout.tileW + 2 - 400,
+			y: cam.y,
+		};
+		expect(clearlyCenteredCell(gapCam.x, gapCam.y, 800, 600, layout, previous)).toEqual(previous);
+		expect(clearlyCenteredCell(gapCam.x, gapCam.y, 800, 600, layout, null)).toEqual({ x: 1, y: 0 });
 	});
 });

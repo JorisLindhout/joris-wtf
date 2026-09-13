@@ -5,7 +5,7 @@ import { getSiteSeo } from '../lib/content';
 const seo = await getSiteSeo();
 ---
 
-<Layout seo={seo} title={`404 — ${seo.siteName}`} description="This path is not a project.">
+<Layout seo={seo} title={`404 — ${seo.siteName}`} description="This path is not a project." robots="noindex">
 	<main>
 		<div class="void" aria-hidden="true">
 			<div class="wash haze"></div>

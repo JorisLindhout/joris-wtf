@@ -18,7 +18,25 @@ export const project = defineType({
 			title: 'Slug',
 			type: 'slug',
 			options: { source: 'title', maxLength: 96 },
-			validation: (rule) => rule.required(),
+			validation: (rule) =>
+				rule.required().custom((value) => {
+					const current = value?.current;
+					if (!current) return true;
+					const reserved = new Set([
+						'404',
+						'_astro',
+						'favicon',
+						'favicon.ico',
+						'llms.txt',
+						'robots.txt',
+						'site.webmanifest',
+						'sitemap-0',
+						'sitemap-0.xml',
+						'sitemap-index',
+						'sitemap-index.xml',
+					]);
+					return reserved.has(current) ? 'This slug is reserved for the site.' : true;
+				}),
 		}),
 		defineField({
 			name: 'url',

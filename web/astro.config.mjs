@@ -1,6 +1,5 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import sitemap from '@astrojs/sitemap';
 import svelte from '@astrojs/svelte';
 import sanity from '@sanity/astro';
 import { loadEnv } from 'vite';
@@ -15,7 +14,6 @@ export default defineConfig({
 	site: 'https://joris.wtf',
 	integrations: [
 		svelte(),
-		sitemap(),
 		sanity({
 			projectId: PUBLIC_SANITY_PROJECT_ID || 'elkf1eqd',
 			dataset: PUBLIC_SANITY_DATASET || 'production',

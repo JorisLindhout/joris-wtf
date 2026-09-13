@@ -190,6 +190,82 @@ export function cellFullyInViewport(
 	);
 }
 
+export function primaryCellForIndex(index: number, cols: number): Cell {
+	const n = Math.max(0, index | 0);
+	const c = Math.max(1, cols | 0);
+	return { x: n % c, y: Math.floor(n / c) };
+}
+
+export function cameraForCenteredCell(
+	x: number,
+	y: number,
+	layout: Layout,
+	viewportW: number,
+	viewportH: number,
+): { x: number; y: number } {
+	return {
+		x: x * layout.cellW + layout.tileW / 2 - viewportW / 2,
+		y: y * layout.cellH + layout.tileH / 2 - viewportH / 2,
+	};
+}
+
+/** Keep a neighbor from stealing the URL until it is clearly closer. */
+export const CENTER_HYSTERESIS = 0.28;
+
+function tileCenter(cell: Cell, layout: Layout): { x: number; y: number } {
+	return {
+		x: cell.x * layout.cellW + layout.tileW / 2,
+		y: cell.y * layout.cellH + layout.tileH / 2,
+	};
+}
+
+function dist2(ax: number, ay: number, bx: number, by: number): number {
+	const dx = ax - bx;
+	const dy = ay - by;
+	return dx * dx + dy * dy;
+}
+
+/**
+ * Cell whose tile center is nearest the viewport center. With a previous cell,
+ * keep it until a neighbor is closer by a hysteresis margin.
+ */
+export function clearlyCenteredCell(
+	camX: number,
+	camY: number,
+	viewportW: number,
+	viewportH: number,
+	layout: Layout,
+	previous: Cell | null = null,
+	hysteresis = CENTER_HYSTERESIS,
+): Cell | null {
+	const vx = camX + viewportW / 2;
+	const vy = camY + viewportH / 2;
+	const approxX = Math.round((vx - layout.tileW / 2) / layout.cellW);
+	const approxY = Math.round((vy - layout.tileH / 2) / layout.cellH);
+
+	let nearest: Cell = { x: approxX, y: approxY };
+	let nearestDist = Infinity;
+	for (let y = approxY - 1; y <= approxY + 1; y += 1) {
+		for (let x = approxX - 1; x <= approxX + 1; x += 1) {
+			const center = tileCenter({ x, y }, layout);
+			const d = dist2(vx, vy, center.x, center.y);
+			if (d < nearestDist) {
+				nearestDist = d;
+				nearest = { x, y };
+			}
+		}
+	}
+
+	if (!previous) return nearest;
+	if (previous.x === nearest.x && previous.y === nearest.y) return nearest;
+
+	const previousCenter = tileCenter(previous, layout);
+	const previousDist = dist2(vx, vy, previousCenter.x, previousCenter.y);
+	const margin = Math.min(layout.tileW, layout.tileH) * hysteresis;
+	if (Math.sqrt(nearestDist) + margin < Math.sqrt(previousDist)) return nearest;
+	return previous;
+}
+
 export function visibleCells(
 	camX: number,
 	camY: number,

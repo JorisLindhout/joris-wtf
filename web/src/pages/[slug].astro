@@ -1,0 +1,19 @@
+---
+import FieldPage from '../components/FieldPage.astro';
+import { getProjects, getSiteSeo } from '../lib/content';
+import { isReservedProjectSlug } from '../lib/slugs';
+
+export async function getStaticPaths() {
+	const [projects, seo] = await Promise.all([getProjects(), getSiteSeo()]);
+	return projects
+		.filter((project) => !isReservedProjectSlug(project.slug))
+		.map((project) => ({
+			params: { slug: project.slug },
+			props: { project, projects, seo },
+		}));
+}
+
+const { project, projects, seo } = Astro.props;
+---
+
+<FieldPage {seo} {projects} focus={project} />
