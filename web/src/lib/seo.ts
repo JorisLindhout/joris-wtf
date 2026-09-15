@@ -18,7 +18,7 @@ export type WebAppManifest = {
 	lang: string;
 	start_url: string;
 	id: string;
-	display: 'standalone';
+	display: 'browser';
 	background_color: string;
 	theme_color: string;
 	icons: WebAppManifestIcon[];
@@ -42,7 +42,7 @@ export function webManifestFromSeo(seo: SiteSeo): WebAppManifest {
 		lang: seo.locale,
 		start_url: '/',
 		id: '/',
-		display: 'standalone',
+		display: 'browser',
 		background_color: SITE_THEME_COLOR,
 		theme_color: SITE_THEME_COLOR,
 		icons: [
