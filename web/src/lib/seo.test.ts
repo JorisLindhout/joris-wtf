@@ -144,7 +144,7 @@ describe('webManifestFromSeo', () => {
 			lang: 'en',
 			start_url: '/',
 			id: '/',
-			display: 'standalone',
+			display: 'browser',
 			theme_color: SITE_THEME_COLOR,
 			background_color: SITE_THEME_COLOR,
 		});
